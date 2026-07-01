@@ -33,6 +33,7 @@ Get a free API key at [packagerating.com](https://packagerating.com).
 | `fail-on-automation` | no | — | Fail if any package `automation_score` is below this (0–100) |
 | `fail-on-risk` | no | — | Fail if any package `risk_score` is below this (0–100) |
 | `pr-comment` | no | `true` | Post/update a PR comment with the score table |
+| `github-token` | no | `${{ github.token }}` | Token used to post/update the PR comment |
 | `crawl-timeout` | no | `120` | Seconds to wait for an on-demand crawl of unscored packages |
 
 ## Outputs

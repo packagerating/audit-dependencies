@@ -30043,13 +30043,13 @@ function checkThresholds(scores, thresholds) {
     const failures = [];
     for (const pkg of scores.filter(s => s.status === 'scored')) {
         const reasons = [];
-        if (thresholds.general !== null && (pkg.generalScore ?? 0) < thresholds.general) {
+        if (thresholds.general !== null && pkg.generalScore !== null && pkg.generalScore < thresholds.general) {
             reasons.push(`general: ${pkg.generalScore} < ${thresholds.general}`);
         }
-        if (thresholds.automation !== null && (pkg.automationScore ?? 0) < thresholds.automation) {
+        if (thresholds.automation !== null && pkg.automationScore !== null && pkg.automationScore < thresholds.automation) {
             reasons.push(`automation: ${pkg.automationScore} < ${thresholds.automation}`);
         }
-        if (thresholds.risk !== null && (pkg.riskScore ?? 0) < thresholds.risk) {
+        if (thresholds.risk !== null && pkg.riskScore !== null && pkg.riskScore < thresholds.risk) {
             reasons.push(`risk: ${pkg.riskScore} < ${thresholds.risk}`);
         }
         if (reasons.length > 0) {
@@ -30074,7 +30074,7 @@ async function run() {
     // Write report before gating so the summary is always visible
     await (0, report_1.writeJobSummary)(scores, thresholds);
     if (core.getInput('pr-comment') !== 'false') {
-        await (0, report_1.upsertPrComment)(scores, thresholds);
+        await (0, report_1.upsertPrComment)(scores, thresholds, core.getInput('github-token'));
     }
     const scored = scores.filter(s => s.status === 'scored');
     core.setOutput('packages-scored', String(scored.length));
@@ -30175,32 +30175,36 @@ async function writeJobSummary(scores, thresholds) {
         .addEOL()
         .write();
 }
-async function upsertPrComment(scores, thresholds) {
+async function upsertPrComment(scores, thresholds, token) {
     const { eventName, payload } = github.context;
     if (eventName !== 'pull_request' || !payload.pull_request)
         return;
-    const token = process.env['GITHUB_TOKEN'];
     if (!token)
         return;
-    const octokit = github.getOctokit(token);
-    const { owner, repo } = github.context.repo;
-    const prNumber = payload.pull_request.number;
-    const table = buildMarkdownTable(scores, thresholds);
-    const body = [
-        COMMENT_MARKER,
-        '## Package Rating Audit',
-        '',
-        table,
-        '',
-        '_Updated by [packagerating/audit-dependencies](https://github.com/packagerating/audit-dependencies) · [packagerating.com](https://packagerating.com)_',
-    ].join('\n');
-    const comments = await octokit.rest.issues.listComments({ owner, repo, issue_number: prNumber });
-    const existing = comments.data.find(c => c.body?.includes(COMMENT_MARKER));
-    if (existing) {
-        await octokit.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+    try {
+        const octokit = github.getOctokit(token);
+        const { owner, repo } = github.context.repo;
+        const prNumber = payload.pull_request.number;
+        const table = buildMarkdownTable(scores, thresholds);
+        const body = [
+            COMMENT_MARKER,
+            '## Package Rating Audit',
+            '',
+            table,
+            '',
+            '_Updated by [packagerating/audit-dependencies](https://github.com/packagerating/audit-dependencies) · [packagerating.com](https://packagerating.com)_',
+        ].join('\n');
+        const comments = await octokit.rest.issues.listComments({ owner, repo, issue_number: prNumber });
+        const existing = comments.data.find(c => c.body?.includes(COMMENT_MARKER));
+        if (existing) {
+            await octokit.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+        }
+        else {
+            await octokit.rest.issues.createComment({ owner, repo, issue_number: prNumber, body });
+        }
     }
-    else {
-        await octokit.rest.issues.createComment({ owner, repo, issue_number: prNumber, body });
+    catch (err) {
+        core.warning(`Failed to post PR comment: ${err instanceof Error ? err.message : String(err)}`);
     }
 }
 
