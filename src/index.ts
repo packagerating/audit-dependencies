@@ -21,8 +21,8 @@ export function checkThresholds(scores: PackageScore[], thresholds: Thresholds):
     if (thresholds.automation !== null && pkg.automationScore !== null && pkg.automationScore < thresholds.automation) {
       reasons.push(`automation: ${pkg.automationScore} < ${thresholds.automation}`)
     }
-    if (thresholds.risk !== null && pkg.riskScore !== null && pkg.riskScore < thresholds.risk) {
-      reasons.push(`risk: ${pkg.riskScore} < ${thresholds.risk}`)
+    if (thresholds.risk !== null && pkg.riskScore !== null && pkg.riskScore > thresholds.risk) {
+      reasons.push(`risk: ${pkg.riskScore} > ${thresholds.risk}`)
     }
     if (reasons.length > 0) {
       failures.push(`${pkg.name} (${reasons.join(', ')})`)
