@@ -45,33 +45,36 @@ export async function writeJobSummary(scores: PackageScore[], thresholds: Thresh
     .write()
 }
 
-export async function upsertPrComment(scores: PackageScore[], thresholds: Thresholds): Promise<void> {
+export async function upsertPrComment(scores: PackageScore[], thresholds: Thresholds, token: string): Promise<void> {
   const { eventName, payload } = github.context
   if (eventName !== 'pull_request' || !payload.pull_request) return
 
-  const token = process.env['GITHUB_TOKEN']
   if (!token) return
 
-  const octokit = github.getOctokit(token)
-  const { owner, repo } = github.context.repo
-  const prNumber = (payload.pull_request as { number: number }).number
+  try {
+    const octokit = github.getOctokit(token)
+    const { owner, repo } = github.context.repo
+    const prNumber = (payload.pull_request as { number: number }).number
 
-  const table = buildMarkdownTable(scores, thresholds)
-  const body = [
-    COMMENT_MARKER,
-    '## Package Rating Audit',
-    '',
-    table,
-    '',
-    '_Updated by [packagerating/audit-dependencies](https://github.com/packagerating/audit-dependencies) · [packagerating.com](https://packagerating.com)_',
-  ].join('\n')
+    const table = buildMarkdownTable(scores, thresholds)
+    const body = [
+      COMMENT_MARKER,
+      '## Package Rating Audit',
+      '',
+      table,
+      '',
+      '_Updated by [packagerating/audit-dependencies](https://github.com/packagerating/audit-dependencies) · [packagerating.com](https://packagerating.com)_',
+    ].join('\n')
 
-  const comments = await octokit.rest.issues.listComments({ owner, repo, issue_number: prNumber })
-  const existing = comments.data.find(c => c.body?.includes(COMMENT_MARKER))
+    const comments = await octokit.rest.issues.listComments({ owner, repo, issue_number: prNumber })
+    const existing = comments.data.find(c => c.body?.includes(COMMENT_MARKER))
 
-  if (existing) {
-    await octokit.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body })
-  } else {
-    await octokit.rest.issues.createComment({ owner, repo, issue_number: prNumber, body })
+    if (existing) {
+      await octokit.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body })
+    } else {
+      await octokit.rest.issues.createComment({ owner, repo, issue_number: prNumber, body })
+    }
+  } catch (err) {
+    core.warning(`Failed to post PR comment: ${err instanceof Error ? err.message : String(err)}`)
   }
 }

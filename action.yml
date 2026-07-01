@@ -38,6 +38,10 @@ inputs:
     description: 'Post results as a PR comment (requires pull-requests: write permission)'
     required: false
     default: 'true'
+  github-token:
+    description: 'Token used to post/update the PR comment'
+    required: false
+    default: '${{ github.token }}'
   crawl-timeout:
     description: 'Seconds to wait for on-demand crawl of unscored packages'
     required: false

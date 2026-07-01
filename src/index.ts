@@ -15,13 +15,13 @@ export function checkThresholds(scores: PackageScore[], thresholds: Thresholds):
   const failures: string[] = []
   for (const pkg of scores.filter(s => s.status === 'scored')) {
     const reasons: string[] = []
-    if (thresholds.general !== null && (pkg.generalScore ?? 0) < thresholds.general) {
+    if (thresholds.general !== null && pkg.generalScore !== null && pkg.generalScore < thresholds.general) {
       reasons.push(`general: ${pkg.generalScore} < ${thresholds.general}`)
     }
-    if (thresholds.automation !== null && (pkg.automationScore ?? 0) < thresholds.automation) {
+    if (thresholds.automation !== null && pkg.automationScore !== null && pkg.automationScore < thresholds.automation) {
       reasons.push(`automation: ${pkg.automationScore} < ${thresholds.automation}`)
     }
-    if (thresholds.risk !== null && (pkg.riskScore ?? 0) < thresholds.risk) {
+    if (thresholds.risk !== null && pkg.riskScore !== null && pkg.riskScore < thresholds.risk) {
       reasons.push(`risk: ${pkg.riskScore} < ${thresholds.risk}`)
     }
     if (reasons.length > 0) {
@@ -60,7 +60,7 @@ async function run(): Promise<void> {
   // Write report before gating so the summary is always visible
   await writeJobSummary(scores, thresholds)
   if (core.getInput('pr-comment') !== 'false') {
-    await upsertPrComment(scores, thresholds)
+    await upsertPrComment(scores, thresholds, core.getInput('github-token'))
   }
 
   const scored = scores.filter(s => s.status === 'scored')
