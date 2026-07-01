@@ -72,8 +72,8 @@ describe('run() integration', () => {
     const merged = { ...defaults, ...inputs }
     getInputMock.mockImplementation((name: string) => merged[name] ?? '')
 
-    await import('../src/index')
-    await vi.waitFor(() => expect(setOutputMock).toHaveBeenCalledWith('packages-below-threshold', expect.anything()))
+    const { run } = await import('../src/index')
+    await run()
   }
 
   it('reads the github-token input and passes it through to upsertPrComment', async () => {

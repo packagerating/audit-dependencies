@@ -31,7 +31,7 @@ export function checkThresholds(scores: PackageScore[], thresholds: Thresholds):
   return failures
 }
 
-async function run(): Promise<void> {
+export async function run(): Promise<void> {
   const thresholds: Thresholds = {
     general: parseThreshold(core.getInput('fail-on-general')),
     automation: parseThreshold(core.getInput('fail-on-automation')),
@@ -75,4 +75,9 @@ async function run(): Promise<void> {
   }
 }
 
-run().catch(err => core.setFailed(err instanceof Error ? err.message : String(err)))
+// Only auto-run when this module is the actual process entry point (dist/index.js
+// invoked directly by GitHub Actions) — importing it for `checkThresholds` in tests
+// must not trigger a real run() against live network/filesystem state.
+if (require.main === module) {
+  run().catch(err => core.setFailed(err instanceof Error ? err.message : String(err)))
+}
