@@ -20,7 +20,7 @@ describe('checkThresholds', () => {
 
   it('returns failure when general score is below threshold', () => {
     const result = checkThresholds(
-      [scored('pkg', 30, 80, 80)],
+      [scored('pkg', 30, 80, 10)],
       { general: 50, automation: null, risk: null },
     )
     expect(result).toHaveLength(1)
@@ -30,23 +30,31 @@ describe('checkThresholds', () => {
 
   it('returns failure when automation score is below threshold', () => {
     const result = checkThresholds(
-      [scored('pkg', 80, 30, 80)],
+      [scored('pkg', 80, 30, 10)],
       { general: null, automation: 50, risk: null },
     )
     expect(result[0]).toContain('automation: 30 < 50')
   })
 
-  it('returns failure when risk score is below threshold', () => {
+  it('returns failure when risk score is above threshold', () => {
+    const result = checkThresholds(
+      [scored('pkg', 80, 80, 70)],
+      { general: null, automation: null, risk: 50 },
+    )
+    expect(result[0]).toContain('risk: 70 > 50')
+  })
+
+  it('does not fail when risk score is at or below threshold', () => {
     const result = checkThresholds(
       [scored('pkg', 80, 80, 30)],
       { general: null, automation: null, risk: 50 },
     )
-    expect(result[0]).toContain('risk: 30 < 50')
+    expect(result).toEqual([])
   })
 
   it('includes all failing dimensions in one entry per package', () => {
     const result = checkThresholds(
-      [scored('pkg', 20, 20, 20)],
+      [scored('pkg', 20, 20, 90)],
       { general: 50, automation: 50, risk: 50 },
     )
     expect(result).toHaveLength(1)
@@ -63,7 +71,7 @@ describe('checkThresholds', () => {
     expect(result).toEqual([])
   })
 
-  it('passes when score exactly equals threshold', () => {
+  it('passes when general/automation scores exactly equal threshold', () => {
     const result = checkThresholds(
       [scored('pkg', 50, 50, 50)],
       { general: 50, automation: 50, risk: 50 },
@@ -73,7 +81,7 @@ describe('checkThresholds', () => {
 
   it('does not fail when null dimension has a threshold but other dimensions pass', () => {
     const result = checkThresholds(
-      [partiallyScored('pkg', 80, null, 80)],
+      [partiallyScored('pkg', 80, null, 10)],
       { general: null, automation: 50, risk: null },
     )
     expect(result).toEqual([])

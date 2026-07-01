@@ -38,21 +38,38 @@ describe('buildMarkdownTable', () => {
     expect(lines[3]).toContain('unscored')
   })
 
-  it('shows ✅ when score meets threshold', () => {
+  it('shows ✅ for general/automation when score meets threshold, and for risk when at or below threshold', () => {
     const scores: PackageScore[] = [
-      { name: 'pkg', generalScore: 75, automationScore: 80, riskScore: 70, status: 'scored' },
+      { name: 'pkg', generalScore: 75, automationScore: 80, riskScore: 20, status: 'scored' },
     ]
     const table = buildMarkdownTable(scores, { general: 50, automation: 50, risk: 50 })
     expect(table).toContain('✅')
     expect(table).not.toContain('⚠️')
   })
 
-  it('shows ⚠️ when score is below threshold', () => {
+  it('shows ⚠️ for general/automation when score is below threshold', () => {
     const scores: PackageScore[] = [
-      { name: 'pkg', generalScore: 30, automationScore: 40, riskScore: 35, status: 'scored' },
+      { name: 'pkg', generalScore: 30, automationScore: 40, riskScore: 20, status: 'scored' },
     ]
     const table = buildMarkdownTable(scores, { general: 50, automation: 50, risk: 50 })
     expect(table).toContain('⚠️')
+  })
+
+  it('shows ⚠️ for risk when score is above threshold', () => {
+    const scores: PackageScore[] = [
+      { name: 'pkg', generalScore: 80, automationScore: 80, riskScore: 70, status: 'scored' },
+    ]
+    const table = buildMarkdownTable(scores, { general: null, automation: null, risk: 50 })
+    expect(table).toContain('⚠️')
+  })
+
+  it('shows ✅ for risk when score is at or below threshold', () => {
+    const scores: PackageScore[] = [
+      { name: 'pkg', generalScore: 80, automationScore: 80, riskScore: 50, status: 'scored' },
+    ]
+    const table = buildMarkdownTable(scores, { general: null, automation: null, risk: 50 })
+    expect(table).toContain('✅')
+    expect(table).not.toContain('⚠️')
   })
 
   it('shows plain number when no threshold is configured for that dimension', () => {
