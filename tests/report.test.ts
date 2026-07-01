@@ -5,6 +5,7 @@ import type { PackageScore, Thresholds } from '../src/types'
 // Mock @actions/core and @actions/github — only used by writeJobSummary / upsertPrComment
 vi.mock('@actions/core', () => ({
   summary: { addHeading: vi.fn().mockReturnThis(), addRaw: vi.fn().mockReturnThis(), addEOL: vi.fn().mockReturnThis(), write: vi.fn().mockResolvedValue(undefined) },
+  warning: vi.fn(),
 }))
 vi.mock('@actions/github', () => ({
   context: { eventName: 'push', payload: {}, repo: { owner: 'o', repo: 'r' } },
@@ -85,5 +86,50 @@ describe('buildMarkdownTable', () => {
       { name: 'pkg', generalScore: null, automationScore: null, riskScore: null, status: 'crawl-error' },
     ]
     expect(buildMarkdownTable(scores, none)).toContain('Crawl error')
+  })
+})
+
+describe('upsertPrComment', () => {
+  let warningMock: ReturnType<typeof vi.fn>
+  let octokitError: Error
+
+  beforeEach(() => {
+    vi.resetModules()
+
+    warningMock = vi.fn()
+    octokitError = new Error('Octokit error')
+
+    vi.doMock('@actions/core', () => ({
+      summary: { addHeading: vi.fn().mockReturnThis(), addRaw: vi.fn().mockReturnThis(), addEOL: vi.fn().mockReturnThis(), write: vi.fn().mockResolvedValue(undefined) },
+      warning: warningMock,
+    }))
+
+    vi.doMock('@actions/github', () => ({
+      context: {
+        eventName: 'pull_request',
+        payload: { pull_request: { number: 42 } },
+        repo: { owner: 'test-owner', repo: 'test-repo' },
+      },
+      getOctokit: vi.fn(() => ({
+        rest: {
+          issues: {
+            listComments: vi.fn().mockRejectedValue(octokitError),
+          },
+        },
+      })),
+    }))
+  })
+
+  it('catches Octokit errors and calls core.warning instead of throwing', async () => {
+    const { upsertPrComment } = await import('../src/report')
+    const scores: PackageScore[] = [
+      { name: 'pkg', generalScore: 75, automationScore: 80, riskScore: 70, status: 'scored' },
+    ]
+
+    // Should not throw
+    await upsertPrComment(scores, { general: null, automation: null, risk: null }, 'test-token')
+
+    // Should call core.warning
+    expect(warningMock).toHaveBeenCalledWith(expect.stringContaining('Failed to post PR comment'))
   })
 })

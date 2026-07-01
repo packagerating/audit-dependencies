@@ -8,6 +8,9 @@ const scored = (name: string, g: number, a: number, r: number): PackageScore => 
 const unscored = (name: string): PackageScore => ({
   name, generalScore: null, automationScore: null, riskScore: null, status: 'unscored',
 })
+const partiallyScored = (name: string, g: number | null, a: number | null, r: number | null): PackageScore => ({
+  name, generalScore: g, automationScore: a, riskScore: r, status: 'scored',
+})
 
 describe('checkThresholds', () => {
   it('returns empty array when no thresholds are set', () => {
@@ -64,6 +67,14 @@ describe('checkThresholds', () => {
     const result = checkThresholds(
       [scored('pkg', 50, 50, 50)],
       { general: 50, automation: 50, risk: 50 },
+    )
+    expect(result).toEqual([])
+  })
+
+  it('does not fail when null dimension has a threshold but other dimensions pass', () => {
+    const result = checkThresholds(
+      [partiallyScored('pkg', 80, null, 80)],
+      { general: null, automation: 50, risk: null },
     )
     expect(result).toEqual([])
   })
