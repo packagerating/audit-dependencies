@@ -31,7 +31,7 @@ Get a free API key at [packagerating.com](https://packagerating.com).
 | `include-optional` | no | `false` | Include `optionalDependencies` |
 | `fail-on-general` | no | — | Fail if any package `general_score` is below this (0–100) |
 | `fail-on-automation` | no | — | Fail if any package `automation_score` is below this (0–100) |
-| `fail-on-risk` | no | — | Fail if any package `risk_score` is below this (0–100) |
+| `fail-on-risk` | no | — | Fail if any package `risk_score` is above this (0–100) — higher risk_score means riskier |
 | `pr-comment` | no | `true` | Post/update a PR comment with the score table |
 | `github-token` | no | `${{ github.token }}` | Token used to post/update the PR comment |
 | `crawl-timeout` | no | `120` | Seconds to wait for an on-demand crawl of unscored packages |
@@ -57,12 +57,14 @@ when a score is missing: `Crawl timed out` (the on-demand crawl didn't finish wi
   with:
     api-key: ${{ secrets.PACKAGERATING_API_KEY }}
     fail-on-general: 50
-    fail-on-risk: 40
+    fail-on-risk: 60
 ```
 
-The workflow fails if any package's `general_score` < 50 **or** `risk_score` < 40. The score table is always written to the job summary before the failure so you can see what triggered it.
+The workflow fails if any package's `general_score` < 50 **or** `risk_score` > 60. The score table is always written to the job summary before the failure so you can see what triggered it.
 
 ## Scores
+
+General and Automation: higher is better.
 
 | Range | Interpretation |
 |---|---|
@@ -71,5 +73,15 @@ The workflow fails if any package's `general_score` < 50 **or** `risk_score` < 4
 | 50–69 | Fair — some maintenance concerns |
 | 25–49 | Poor — significant concerns |
 | 0–24 | Critical — abandoned or insecure |
+
+Risk: inverted — lower is better.
+
+| Range | Interpretation |
+|---|---|
+| 0–10 | Minimal risk — actively maintained and secure |
+| 11–30 | Low risk — minor concerns |
+| 31–50 | Moderate risk — some maintenance or security signals |
+| 51–75 | High risk — significant maintenance or security concerns |
+| 76–100 | Critical risk — abandoned or insecure |
 
 Full score methodology: [packagerating.com/github-action](https://packagerating.com/github-action)
