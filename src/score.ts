@@ -78,8 +78,12 @@ async function crawlAndWait(
         job.processed >= job.total)
 
     if (done) {
-      const scored = await fetchScoreOnce(name, apiKey)
-      if (scored) return scored
+      try {
+        const scored = await fetchScoreOnce(name, apiKey)
+        if (scored) return scored
+      } catch {
+        return { name, generalScore: null, automationScore: null, riskScore: null, status: 'crawl-error' }
+      }
     }
   }
 
@@ -94,9 +98,13 @@ export async function scorePackages(
   const timeoutMs = crawlTimeoutSeconds * 1000
   return Promise.all(
     names.map(async name => {
-      const scored = await fetchScoreOnce(name, apiKey)
-      if (scored) return scored
-      return crawlAndWait(name, apiKey, timeoutMs)
+      try {
+        const scored = await fetchScoreOnce(name, apiKey)
+        if (scored) return scored
+        return crawlAndWait(name, apiKey, timeoutMs)
+      } catch {
+        return { name, generalScore: null, automationScore: null, riskScore: null, status: 'crawl-error' }
+      }
     }),
   )
 }

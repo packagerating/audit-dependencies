@@ -80,4 +80,22 @@ describe('scorePackages', () => {
     expect(result.find(r => r.name === 'pkg-a')!.generalScore).toBe(80)
     expect(result.find(r => r.name === 'pkg-b')!.generalScore).toBe(60)
   })
+
+  it('handles API error for one package without crashing the batch', async () => {
+    mockFetch
+      .mockResolvedValueOnce(serverError()) // GET /packages/bad-pkg
+      .mockResolvedValueOnce(ok({ general_score: 75, automation_score: 78, risk_score: 70 })) // GET /packages/good-pkg
+    const result = await scorePackages(['bad-pkg', 'good-pkg'], 'key', 10)
+    expect(result).toHaveLength(2)
+    const badPkg = result.find(r => r.name === 'bad-pkg')!
+    const goodPkg = result.find(r => r.name === 'good-pkg')!
+    expect(badPkg.status).toBe('crawl-error')
+    expect(badPkg.generalScore).toBeNull()
+    expect(badPkg.automationScore).toBeNull()
+    expect(badPkg.riskScore).toBeNull()
+    expect(goodPkg.status).toBe('scored')
+    expect(goodPkg.generalScore).toBe(75)
+    expect(goodPkg.automationScore).toBe(78)
+    expect(goodPkg.riskScore).toBe(70)
+  })
 })
