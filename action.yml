@@ -31,7 +31,7 @@ inputs:
     required: false
     default: ''
   fail-on-risk:
-    description: 'Fail if any package risk_score is below this threshold (0–100)'
+    description: 'Fail if any package risk_score is above this threshold (0–100) — higher risk_score means riskier'
     required: false
     default: ''
   pr-comment:
