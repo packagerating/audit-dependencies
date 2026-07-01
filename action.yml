@@ -1,0 +1,58 @@
+name: 'Audit Dependencies'
+description: 'Score your npm dependencies with packagerating.com and report results in pull requests'
+author: 'packagerating'
+
+inputs:
+  api-key:
+    description: 'Your packagerating.com API key'
+    required: true
+  package-json-path:
+    description: 'Path to package.json relative to repo root'
+    required: false
+    default: 'package.json'
+  packages:
+    description: 'Explicit comma-separated package list (overrides package.json discovery)'
+    required: false
+    default: ''
+  include-dev:
+    description: 'Include devDependencies'
+    required: false
+    default: 'false'
+  include-optional:
+    description: 'Include optionalDependencies'
+    required: false
+    default: 'false'
+  fail-on-general:
+    description: 'Fail if any package general_score is below this threshold (0–100)'
+    required: false
+    default: ''
+  fail-on-automation:
+    description: 'Fail if any package automation_score is below this threshold (0–100)'
+    required: false
+    default: ''
+  fail-on-risk:
+    description: 'Fail if any package risk_score is below this threshold (0–100)'
+    required: false
+    default: ''
+  pr-comment:
+    description: 'Post results as a PR comment (requires pull-requests: write permission)'
+    required: false
+    default: 'true'
+  crawl-timeout:
+    description: 'Seconds to wait for on-demand crawl of unscored packages'
+    required: false
+    default: '120'
+
+outputs:
+  packages-scored:
+    description: 'Number of packages successfully scored'
+  packages-below-threshold:
+    description: 'Comma-separated list of packages that failed at least one threshold'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
+
+branding:
+  icon: 'shield'
+  color: 'blue'
