@@ -4,11 +4,12 @@ import type { PackageScore, Thresholds } from './types'
 
 const COMMENT_MARKER = '<!-- packagerating-audit -->'
 
-function scoreCell(value: number | null, threshold: number | null): string {
+function scoreCell(value: number | null, threshold: number | null, direction: 'higher-is-better' | 'lower-is-better' = 'higher-is-better'): string {
   if (value === null) return '—'
   const rounded = Math.round(value)
   if (threshold === null) return String(rounded)
-  return value >= threshold ? `${rounded} ✅` : `${rounded} ⚠️`
+  const passes = direction === 'higher-is-better' ? value >= threshold : value <= threshold
+  return passes ? `${rounded} ✅` : `${rounded} ⚠️`
 }
 
 function noteCell(pkg: PackageScore): string {
@@ -26,7 +27,7 @@ export function buildMarkdownTable(scores: PackageScore[], thresholds: Threshold
   })
 
   const rows = sorted.map(pkg =>
-    `| ${pkg.name} | ${scoreCell(pkg.generalScore, thresholds.general)} | ${scoreCell(pkg.automationScore, thresholds.automation)} | ${scoreCell(pkg.riskScore, thresholds.risk)} | ${noteCell(pkg)} |`,
+    `| ${pkg.name} | ${scoreCell(pkg.generalScore, thresholds.general)} | ${scoreCell(pkg.automationScore, thresholds.automation)} | ${scoreCell(pkg.riskScore, thresholds.risk, 'lower-is-better')} | ${noteCell(pkg)} |`,
   )
 
   return [
