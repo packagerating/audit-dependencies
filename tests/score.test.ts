@@ -100,16 +100,22 @@ describe('scorePackages', () => {
   })
 
   it('handles crawl-trigger fetch rejection without crashing the batch', async () => {
-    // Use mockImplementation to route based on URL
-    mockFetch.mockImplementation((url: string | Request) => {
+    // Use mockImplementation to route based on URL (and body, for the shared crawl endpoint)
+    mockFetch.mockImplementation((url: string | Request, init?: { body?: string }) => {
       const urlStr = typeof url === 'string' ? url : url.url
-      if (urlStr.includes('/packages/rejected-pkg')) {
-        return Promise.reject(new Error('network error'))
-      }
       if (urlStr.includes('/packages/good-pkg')) {
         return Promise.resolve(ok({ general_score: 75, automation_score: 78, risk_score: 70 }))
       }
-      // POST /packages/crawl or other calls
+      if (urlStr.includes('/packages/rejected-pkg')) {
+        // 404 on the initial GET so rejected-pkg proceeds to trigger a crawl
+        return Promise.resolve(notFound())
+      }
+      if (urlStr === 'https://api.packagerating.com/packages/crawl') {
+        const body = JSON.parse((init?.body as string) ?? '{}') as { packages?: string[] }
+        if (body.packages?.includes('rejected-pkg')) {
+          return Promise.reject(new Error('network error'))
+        }
+      }
       return Promise.resolve(notFound())
     })
 
