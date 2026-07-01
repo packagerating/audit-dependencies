@@ -30027,6 +30027,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.checkThresholds = checkThresholds;
+exports.run = run;
 const core = __importStar(__nccwpck_require__(7484));
 const discover_1 = __nccwpck_require__(9164);
 const score_1 = __nccwpck_require__(9);
@@ -30085,7 +30086,12 @@ async function run() {
         core.setFailed(`${failures.length} package(s) below threshold: ${failures.join('; ')}`);
     }
 }
-run().catch(err => core.setFailed(err instanceof Error ? err.message : String(err)));
+// Only auto-run when this module is the actual process entry point (dist/index.js
+// invoked directly by GitHub Actions) — importing it for `checkThresholds` in tests
+// must not trigger a real run() against live network/filesystem state.
+if (require.main === require.cache[eval('__filename')]) {
+    run().catch(err => core.setFailed(err instanceof Error ? err.message : String(err)));
+}
 
 
 /***/ }),
