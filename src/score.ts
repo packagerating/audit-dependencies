@@ -50,44 +50,61 @@ async function crawlAndWait(
   apiKey: string,
   timeoutMs: number,
 ): Promise<PackageScore> {
-  const crawlRes = await fetch(`${API_BASE}/packages/crawl`, {
-    method: 'POST',
-    headers: { 'x-api-key': apiKey, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ packages: [name], language: 'javascript', maxDepth: 0 }),
-  })
-
-  if (!crawlRes.ok) {
-    return { name, generalScore: null, automationScore: null, riskScore: null, status: 'crawl-error' }
-  }
-
-  const { job_id } = await crawlRes.json() as CrawlResponse
-  const deadline = Date.now() + timeoutMs
-
-  while (Date.now() < deadline) {
-    await sleep(5000)
-    const pollRes = await fetch(`${API_BASE}/packages/crawl/${job_id}`, {
-      headers: { 'x-api-key': apiKey },
+  try {
+    const crawlRes = await fetch(`${API_BASE}/packages/crawl`, {
+      method: 'POST',
+      headers: { 'x-api-key': apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ packages: [name], language: 'javascript', maxDepth: 0 }),
     })
-    if (!pollRes.ok) continue
 
-    const job = await pollRes.json() as CrawlJobResponse
-    const done =
-      job.status === 'done' ||
-      (typeof job.processed === 'number' &&
-        typeof job.total === 'number' &&
-        job.processed >= job.total)
+    if (!crawlRes.ok) {
+      return { name, generalScore: null, automationScore: null, riskScore: null, status: 'crawl-error' }
+    }
 
-    if (done) {
+    let jobId: string
+    try {
+      const { job_id } = await crawlRes.json() as CrawlResponse
+      jobId = job_id
+    } catch {
+      return { name, generalScore: null, automationScore: null, riskScore: null, status: 'crawl-error' }
+    }
+
+    const deadline = Date.now() + timeoutMs
+
+    while (Date.now() < deadline) {
+      await sleep(5000)
+      const pollRes = await fetch(`${API_BASE}/packages/crawl/${jobId}`, {
+        headers: { 'x-api-key': apiKey },
+      })
+      if (!pollRes.ok) continue
+
+      let job: CrawlJobResponse
       try {
-        const scored = await fetchScoreOnce(name, apiKey)
-        if (scored) return scored
+        job = await pollRes.json() as CrawlJobResponse
       } catch {
-        return { name, generalScore: null, automationScore: null, riskScore: null, status: 'crawl-error' }
+        continue
+      }
+
+      const done =
+        job.status === 'done' ||
+        (typeof job.processed === 'number' &&
+          typeof job.total === 'number' &&
+          job.processed >= job.total)
+
+      if (done) {
+        try {
+          const scored = await fetchScoreOnce(name, apiKey)
+          if (scored) return scored
+        } catch {
+          return { name, generalScore: null, automationScore: null, riskScore: null, status: 'crawl-error' }
+        }
       }
     }
-  }
 
-  return { name, generalScore: null, automationScore: null, riskScore: null, status: 'unscored' }
+    return { name, generalScore: null, automationScore: null, riskScore: null, status: 'unscored' }
+  } catch {
+    return { name, generalScore: null, automationScore: null, riskScore: null, status: 'crawl-error' }
+  }
 }
 
 export async function scorePackages(
@@ -101,7 +118,7 @@ export async function scorePackages(
       try {
         const scored = await fetchScoreOnce(name, apiKey)
         if (scored) return scored
-        return crawlAndWait(name, apiKey, timeoutMs)
+        return await crawlAndWait(name, apiKey, timeoutMs)
       } catch {
         return { name, generalScore: null, automationScore: null, riskScore: null, status: 'crawl-error' }
       }

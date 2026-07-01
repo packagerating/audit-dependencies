@@ -98,4 +98,35 @@ describe('scorePackages', () => {
     expect(goodPkg.automationScore).toBe(78)
     expect(goodPkg.riskScore).toBe(70)
   })
+
+  it('handles crawl-trigger fetch rejection without crashing the batch', async () => {
+    // Use mockImplementation to route based on URL
+    mockFetch.mockImplementation((url: string | Request) => {
+      const urlStr = typeof url === 'string' ? url : url.url
+      if (urlStr.includes('/packages/rejected-pkg')) {
+        return Promise.reject(new Error('network error'))
+      }
+      if (urlStr.includes('/packages/good-pkg')) {
+        return Promise.resolve(ok({ general_score: 75, automation_score: 78, risk_score: 70 }))
+      }
+      // POST /packages/crawl or other calls
+      return Promise.resolve(notFound())
+    })
+
+    const result = await scorePackages(['rejected-pkg', 'good-pkg'], 'key', 10)
+    expect(result).toHaveLength(2)
+
+    const rejectedPkg = result.find(r => r.name === 'rejected-pkg')!
+    const goodPkg = result.find(r => r.name === 'good-pkg')!
+
+    expect(rejectedPkg.status).toBe('crawl-error')
+    expect(rejectedPkg.generalScore).toBeNull()
+    expect(rejectedPkg.automationScore).toBeNull()
+    expect(rejectedPkg.riskScore).toBeNull()
+
+    expect(goodPkg.status).toBe('scored')
+    expect(goodPkg.generalScore).toBe(75)
+    expect(goodPkg.automationScore).toBe(78)
+    expect(goodPkg.riskScore).toBe(70)
+  })
 })
