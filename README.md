@@ -43,6 +43,13 @@ Get a free API key at [packagerating.com](https://packagerating.com).
 | `packages-scored` | Number of packages successfully scored |
 | `packages-below-threshold` | Comma-separated packages that failed a threshold |
 
+## Report table
+
+The job summary and PR comment show one row per package with General, Automation, and Risk
+scores, plus a `Note` column. `Note` is blank for normally-scored packages — it's only populated
+when a score is missing: `Crawl timed out` (the on-demand crawl didn't finish within
+`crawl-timeout`) or `Crawl error` (the crawl failed).
+
 ## With gating
 
 ```yaml
