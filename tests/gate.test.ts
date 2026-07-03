@@ -3,13 +3,13 @@ import { checkThresholds } from '../src/index'
 import type { PackageScore, Thresholds } from '../src/types'
 
 const scored = (name: string, g: number, a: number, r: number): PackageScore => ({
-  name, generalScore: g, automationScore: a, riskScore: r, status: 'scored',
+  name, version: '1.0.0', generalScore: g, automationScore: a, riskScore: r, status: 'scored',
 })
 const unscored = (name: string): PackageScore => ({
-  name, generalScore: null, automationScore: null, riskScore: null, status: 'unscored',
+  name, version: null, generalScore: null, automationScore: null, riskScore: null, status: 'unscored',
 })
 const partiallyScored = (name: string, g: number | null, a: number | null, r: number | null): PackageScore => ({
-  name, generalScore: g, automationScore: a, riskScore: r, status: 'scored',
+  name, version: '1.0.0', generalScore: g, automationScore: a, riskScore: r, status: 'scored',
 })
 
 describe('checkThresholds', () => {

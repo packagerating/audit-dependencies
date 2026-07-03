@@ -17,9 +17,9 @@ const none: Thresholds = { general: null, automation: null, risk: null }
 describe('buildMarkdownTable', () => {
   it('sorts ascending by generalScore — lowest first', () => {
     const scores: PackageScore[] = [
-      { name: 'good', generalScore: 90, automationScore: 85, riskScore: 80, status: 'scored' },
-      { name: 'bad',  generalScore: 30, automationScore: 40, riskScore: 35, status: 'scored' },
-      { name: 'mid',  generalScore: 60, automationScore: 65, riskScore: 55, status: 'scored' },
+      { name: 'good', version: '1.0.0', generalScore: 90, automationScore: 85, riskScore: 80, status: 'scored' },
+      { name: 'bad',  version: '1.0.0', generalScore: 30, automationScore: 40, riskScore: 35, status: 'scored' },
+      { name: 'mid',  version: '1.0.0', generalScore: 60, automationScore: 65, riskScore: 55, status: 'scored' },
     ]
     const lines = buildMarkdownTable(scores, none).split('\n')
     // lines[0] = header, lines[1] = separator, lines[2..] = data rows
@@ -30,8 +30,8 @@ describe('buildMarkdownTable', () => {
 
   it('places unscored packages at the bottom regardless of other scores', () => {
     const scores: PackageScore[] = [
-      { name: 'scored',   generalScore: 50, automationScore: 60, riskScore: 55, status: 'scored' },
-      { name: 'unscored', generalScore: null, automationScore: null, riskScore: null, status: 'unscored' },
+      { name: 'scored',   version: '1.0.0', generalScore: 50, automationScore: 60, riskScore: 55, status: 'scored' },
+      { name: 'unscored', version: null, generalScore: null, automationScore: null, riskScore: null, status: 'unscored' },
     ]
     const lines = buildMarkdownTable(scores, none).split('\n')
     expect(lines[2]).toContain('scored')
@@ -40,7 +40,7 @@ describe('buildMarkdownTable', () => {
 
   it('shows ✅ for general/automation when score meets threshold, and for risk when at or below threshold', () => {
     const scores: PackageScore[] = [
-      { name: 'pkg', generalScore: 75, automationScore: 80, riskScore: 20, status: 'scored' },
+      { name: 'pkg', version: '1.0.0', generalScore: 75, automationScore: 80, riskScore: 20, status: 'scored' },
     ]
     const table = buildMarkdownTable(scores, { general: 50, automation: 50, risk: 50 })
     expect(table).toContain('✅')
@@ -49,7 +49,7 @@ describe('buildMarkdownTable', () => {
 
   it('shows ⚠️ for general/automation when score is below threshold', () => {
     const scores: PackageScore[] = [
-      { name: 'pkg', generalScore: 30, automationScore: 40, riskScore: 20, status: 'scored' },
+      { name: 'pkg', version: '1.0.0', generalScore: 30, automationScore: 40, riskScore: 20, status: 'scored' },
     ]
     const table = buildMarkdownTable(scores, { general: 50, automation: 50, risk: 50 })
     expect(table).toContain('⚠️')
@@ -57,7 +57,7 @@ describe('buildMarkdownTable', () => {
 
   it('shows ⚠️ for risk when score is above threshold', () => {
     const scores: PackageScore[] = [
-      { name: 'pkg', generalScore: 80, automationScore: 80, riskScore: 70, status: 'scored' },
+      { name: 'pkg', version: '1.0.0', generalScore: 80, automationScore: 80, riskScore: 70, status: 'scored' },
     ]
     const table = buildMarkdownTable(scores, { general: null, automation: null, risk: 50 })
     expect(table).toContain('⚠️')
@@ -65,7 +65,7 @@ describe('buildMarkdownTable', () => {
 
   it('shows ✅ for risk when score is at or below threshold', () => {
     const scores: PackageScore[] = [
-      { name: 'pkg', generalScore: 80, automationScore: 80, riskScore: 50, status: 'scored' },
+      { name: 'pkg', version: '1.0.0', generalScore: 80, automationScore: 80, riskScore: 50, status: 'scored' },
     ]
     const table = buildMarkdownTable(scores, { general: null, automation: null, risk: 50 })
     expect(table).toContain('✅')
@@ -74,7 +74,7 @@ describe('buildMarkdownTable', () => {
 
   it('shows plain number when no threshold is configured for that dimension', () => {
     const scores: PackageScore[] = [
-      { name: 'pkg', generalScore: 75, automationScore: 80, riskScore: 70, status: 'scored' },
+      { name: 'pkg', version: '1.0.0', generalScore: 75, automationScore: 80, riskScore: 70, status: 'scored' },
     ]
     // Only general threshold set — automation and risk should show plain numbers
     const table = buildMarkdownTable(scores, { general: 50, automation: null, risk: null })
@@ -85,7 +85,7 @@ describe('buildMarkdownTable', () => {
 
   it('shows — for null scores', () => {
     const scores: PackageScore[] = [
-      { name: 'pkg', generalScore: null, automationScore: null, riskScore: null, status: 'unscored' },
+      { name: 'pkg', version: null, generalScore: null, automationScore: null, riskScore: null, status: 'unscored' },
     ]
     const table = buildMarkdownTable(scores, none)
     expect(table).toContain('—')
@@ -93,16 +93,35 @@ describe('buildMarkdownTable', () => {
 
   it('shows "Crawl timed out" note for unscored status', () => {
     const scores: PackageScore[] = [
-      { name: 'pkg', generalScore: null, automationScore: null, riskScore: null, status: 'unscored' },
+      { name: 'pkg', version: null, generalScore: null, automationScore: null, riskScore: null, status: 'unscored' },
     ]
     expect(buildMarkdownTable(scores, none)).toContain('Crawl timed out')
   })
 
   it('shows "Crawl error" note for crawl-error status', () => {
     const scores: PackageScore[] = [
-      { name: 'pkg', generalScore: null, automationScore: null, riskScore: null, status: 'crawl-error' },
+      { name: 'pkg', version: null, generalScore: null, automationScore: null, riskScore: null, status: 'crawl-error' },
     ]
     expect(buildMarkdownTable(scores, none)).toContain('Crawl error')
+  })
+
+  it('shows the package version in its own column', () => {
+    const scores: PackageScore[] = [
+      { name: 'pkg', version: '4.17.21', generalScore: 80, automationScore: 80, riskScore: 20, status: 'scored' },
+    ]
+    const lines = buildMarkdownTable(scores, none).split('\n')
+    expect(lines[0]).toBe('| Package | Version | General | Automation | Risk | Note |')
+    expect(lines[2]).toContain('4.17.21')
+  })
+
+  it('shows — for a null version', () => {
+    const scores: PackageScore[] = [
+      { name: 'pkg', version: null, generalScore: null, automationScore: null, riskScore: null, status: 'unscored' },
+    ]
+    const lines = buildMarkdownTable(scores, none).split('\n')
+    // header | separator | one data row — count the pipe-delimited cells in the data row
+    const cells = lines[2]!.split('|').map(c => c.trim()).filter(c => c.length > 0)
+    expect(cells[1]).toBe('—') // Version cell, second column
   })
 })
 
@@ -140,7 +159,7 @@ describe('upsertPrComment', () => {
   it('catches Octokit errors and calls core.warning instead of throwing', async () => {
     const { upsertPrComment } = await import('../src/report')
     const scores: PackageScore[] = [
-      { name: 'pkg', generalScore: 75, automationScore: 80, riskScore: 70, status: 'scored' },
+      { name: 'pkg', version: '1.0.0', generalScore: 75, automationScore: 80, riskScore: 70, status: 'scored' },
     ]
 
     // Should not throw
