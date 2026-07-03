@@ -20,15 +20,22 @@ beforeEach(() => {
 
 describe('scorePackages', () => {
   it('returns scored package when API returns all three scores', async () => {
-    mockFetch.mockResolvedValue(ok({ general_score: 84, automation_score: 88, risk_score: 79 }))
+    mockFetch.mockResolvedValue(ok({ general_score: 84, automation_score: 88, risk_score: 79, version: '1.7.4' }))
     const result = await scorePackages(['axios'], 'key', 10)
     expect(result).toEqual([{
       name: 'axios',
+      version: '1.7.4',
       generalScore: 84,
       automationScore: 88,
       riskScore: 79,
       status: 'scored',
     }])
+  })
+
+  it('returns version: null when the API response omits version', async () => {
+    mockFetch.mockResolvedValue(ok({ general_score: 84, automation_score: 88, risk_score: 79 }))
+    const result = await scorePackages(['axios'], 'key', 10)
+    expect(result[0]!.version).toBeNull()
   })
 
   it('triggers crawl on 404 and returns scored result after job completes', async () => {
