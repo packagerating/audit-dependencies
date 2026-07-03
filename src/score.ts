@@ -3,6 +3,7 @@ import type { PackageScore } from './types'
 const API_BASE = 'https://api.packagerating.com'
 
 interface ApiPackageResponse {
+  version?: string | null
   general_score?: number | null
   automation_score?: number | null
   risk_score?: number | null
@@ -38,6 +39,7 @@ async function fetchScoreOnce(name: string, apiKey: string): Promise<PackageScor
 
   return {
     name,
+    version: data.version ?? null,
     generalScore: data.general_score ?? null,
     automationScore: data.automation_score ?? null,
     riskScore: data.risk_score ?? null,
@@ -58,7 +60,7 @@ async function crawlAndWait(
     })
 
     if (!crawlRes.ok) {
-      return { name, generalScore: null, automationScore: null, riskScore: null, status: 'crawl-error' }
+      return { name, version: null, generalScore: null, automationScore: null, riskScore: null, status: 'crawl-error' }
     }
 
     let jobId: string
@@ -66,7 +68,7 @@ async function crawlAndWait(
       const { job_id } = await crawlRes.json() as CrawlResponse
       jobId = job_id
     } catch {
-      return { name, generalScore: null, automationScore: null, riskScore: null, status: 'crawl-error' }
+      return { name, version: null, generalScore: null, automationScore: null, riskScore: null, status: 'crawl-error' }
     }
 
     const deadline = Date.now() + timeoutMs
@@ -96,14 +98,14 @@ async function crawlAndWait(
           const scored = await fetchScoreOnce(name, apiKey)
           if (scored) return scored
         } catch {
-          return { name, generalScore: null, automationScore: null, riskScore: null, status: 'crawl-error' }
+          return { name, version: null, generalScore: null, automationScore: null, riskScore: null, status: 'crawl-error' }
         }
       }
     }
 
-    return { name, generalScore: null, automationScore: null, riskScore: null, status: 'unscored' }
+    return { name, version: null, generalScore: null, automationScore: null, riskScore: null, status: 'unscored' }
   } catch {
-    return { name, generalScore: null, automationScore: null, riskScore: null, status: 'crawl-error' }
+    return { name, version: null, generalScore: null, automationScore: null, riskScore: null, status: 'crawl-error' }
   }
 }
 
@@ -120,7 +122,7 @@ export async function scorePackages(
         if (scored) return scored
         return await crawlAndWait(name, apiKey, timeoutMs)
       } catch {
-        return { name, generalScore: null, automationScore: null, riskScore: null, status: 'crawl-error' }
+        return { name, version: null, generalScore: null, automationScore: null, riskScore: null, status: 'crawl-error' }
       }
     }),
   )

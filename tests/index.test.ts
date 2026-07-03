@@ -7,7 +7,7 @@ import type { PackageScore } from '../src/types'
 // buildMarkdownTable, discoverPackages, scorePackages all have their own tests).
 
 const scoredPkg = (name: string, g: number, a: number, r: number): PackageScore => ({
-  name, generalScore: g, automationScore: a, riskScore: r, status: 'scored',
+  name, version: '1.0.0', generalScore: g, automationScore: a, riskScore: r, status: 'scored',
 })
 
 describe('run() integration', () => {
