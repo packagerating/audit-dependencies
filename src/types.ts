@@ -1,5 +1,6 @@
 export interface PackageScore {
   name: string
+  version: string | null
   generalScore: number | null
   automationScore: number | null
   riskScore: number | null
