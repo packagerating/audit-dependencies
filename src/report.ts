@@ -27,12 +27,12 @@ export function buildMarkdownTable(scores: PackageScore[], thresholds: Threshold
   })
 
   const rows = sorted.map(pkg =>
-    `| ${pkg.name} | ${scoreCell(pkg.generalScore, thresholds.general)} | ${scoreCell(pkg.automationScore, thresholds.automation)} | ${scoreCell(pkg.riskScore, thresholds.risk, 'lower-is-better')} | ${noteCell(pkg)} |`,
+    `| ${pkg.name} | ${pkg.version ?? '—'} | ${scoreCell(pkg.generalScore, thresholds.general)} | ${scoreCell(pkg.automationScore, thresholds.automation)} | ${scoreCell(pkg.riskScore, thresholds.risk, 'lower-is-better')} | ${noteCell(pkg)} |`,
   )
 
   return [
-    '| Package | General | Automation | Risk | Note |',
-    '|---|---|---|---|---|',
+    '| Package | Version | General | Automation | Risk | Note |',
+    '|---|---|---|---|---|---|',
     ...rows,
   ].join('\n')
 }

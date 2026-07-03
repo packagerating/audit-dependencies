@@ -104,6 +104,25 @@ describe('buildMarkdownTable', () => {
     ]
     expect(buildMarkdownTable(scores, none)).toContain('Crawl error')
   })
+
+  it('shows the package version in its own column', () => {
+    const scores: PackageScore[] = [
+      { name: 'pkg', version: '4.17.21', generalScore: 80, automationScore: 80, riskScore: 20, status: 'scored' },
+    ]
+    const lines = buildMarkdownTable(scores, none).split('\n')
+    expect(lines[0]).toBe('| Package | Version | General | Automation | Risk | Note |')
+    expect(lines[2]).toContain('4.17.21')
+  })
+
+  it('shows — for a null version', () => {
+    const scores: PackageScore[] = [
+      { name: 'pkg', version: null, generalScore: null, automationScore: null, riskScore: null, status: 'unscored' },
+    ]
+    const lines = buildMarkdownTable(scores, none).split('\n')
+    // header | separator | one data row — count the pipe-delimited cells in the data row
+    const cells = lines[2]!.split('|').map(c => c.trim()).filter(c => c.length > 0)
+    expect(cells[1]).toBe('—') // Version cell, second column
+  })
 })
 
 describe('upsertPrComment', () => {
