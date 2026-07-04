@@ -11,16 +11,19 @@ const mockPkg = {
 }
 
 beforeEach(() => {
+  vi.resetModules() // ensures the two per-test vi.doMock('../src/workspaces', ...) calls near
+  // the end of this file always apply to a fresh dynamic import(), not a stale cached module
+  // instance from an earlier test's mock
   vi.mocked(fs.readFileSync).mockImplementation((p: unknown) => {
     if (String(p).endsWith('package.json')) return JSON.stringify(mockPkg)
     throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
   })
-  vi.mocked(fs.existsSync).mockReturnValue(false) // no lockfile by default
+  vi.mocked(fs.existsSync).mockReturnValue(false) // no lockfile, no workspace config by default
 })
 
 describe('discoverPackages', () => {
   it('returns explicit packages when provided, ignoring package.json for names', () => {
-    const result = discoverPackages('package.json', ['react', 'vue'], false, false, false)
+    const result = discoverPackages('package.json', ['react', 'vue'], false, false, false, false)
     expect(result).toEqual([
       { name: 'react', version: null },
       { name: 'vue', version: null },
@@ -28,12 +31,12 @@ describe('discoverPackages', () => {
   })
 
   it('deduplicates explicit packages', () => {
-    const result = discoverPackages('package.json', ['react', 'react'], false, false, false)
+    const result = discoverPackages('package.json', ['react', 'react'], false, false, false, false)
     expect(result).toEqual([{ name: 'react', version: null }])
   })
 
   it('returns dependencies only by default', () => {
-    const result = discoverPackages('package.json', [], false, false, false)
+    const result = discoverPackages('package.json', [], false, false, false, false)
     const names = result.map(p => p.name)
     expect(names).toContain('axios')
     expect(names).toContain('lodash')
@@ -42,14 +45,14 @@ describe('discoverPackages', () => {
   })
 
   it('includes devDependencies when includeDev is true', () => {
-    const result = discoverPackages('package.json', [], true, false, false)
+    const result = discoverPackages('package.json', [], true, false, false, false)
     const names = result.map(p => p.name)
     expect(names).toContain('vitest')
     expect(names).not.toContain('fsevents')
   })
 
   it('includes optionalDependencies when includeOptional is true', () => {
-    const result = discoverPackages('package.json', [], false, true, false)
+    const result = discoverPackages('package.json', [], false, true, false, false)
     const names = result.map(p => p.name)
     expect(names).toContain('fsevents')
     expect(names).not.toContain('vitest')
@@ -60,13 +63,13 @@ describe('discoverPackages', () => {
       dependencies: { shared: '^1.0.0' },
       devDependencies: { shared: '^1.0.0' },
     }))
-    const result = discoverPackages('package.json', [], true, false, false)
+    const result = discoverPackages('package.json', [], true, false, false, false)
     expect(result.filter(p => p.name === 'shared').length).toBe(1)
   })
 
   it('every entry has version: null when useLockfile is false, even if a lockfile is present', () => {
     vi.mocked(fs.existsSync).mockReturnValue(true) // pretend a lockfile exists
-    const result = discoverPackages('package.json', [], false, false, false)
+    const result = discoverPackages('package.json', [], false, false, false, false)
     expect(result.every(p => p.version === null)).toBe(true)
   })
 
@@ -78,7 +81,7 @@ describe('discoverPackages', () => {
       }
       return JSON.stringify(mockPkg)
     })
-    const result = discoverPackages('package.json', [], false, false, true)
+    const result = discoverPackages('package.json', [], false, false, true, false)
     expect(result.find(p => p.name === 'axios')!.version).toBe('1.7.4')
   })
 
@@ -90,7 +93,7 @@ describe('discoverPackages', () => {
       }
       return JSON.stringify(mockPkg)
     })
-    const result = discoverPackages('package.json', [], false, false, true)
+    const result = discoverPackages('package.json', [], false, false, true, false)
     expect(result.find(p => p.name === 'axios')!.version).toBeNull()
   })
 
@@ -102,7 +105,7 @@ describe('discoverPackages', () => {
       }
       return JSON.stringify(mockPkg)
     })
-    const result = discoverPackages('package.json', ['axios'], false, false, true)
+    const result = discoverPackages('package.json', ['axios'], false, false, true, false)
     expect(result).toEqual([{ name: 'axios', version: '1.7.4' }])
   })
 
@@ -110,7 +113,7 @@ describe('discoverPackages', () => {
     vi.mocked(fs.readFileSync).mockImplementation(() => {
       throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
     })
-    const result = discoverPackages('package.json', ['some-pkg'], false, false, true)
+    const result = discoverPackages('package.json', ['some-pkg'], false, false, true, false)
     expect(result).toEqual([{ name: 'some-pkg', version: null }])
   })
 
@@ -118,6 +121,71 @@ describe('discoverPackages', () => {
     vi.mocked(fs.readFileSync).mockImplementation(() => {
       throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
     })
-    expect(() => discoverPackages('package.json', [], false, false, false)).toThrow()
+    expect(() => discoverPackages('package.json', [], false, false, false, false)).toThrow()
+  })
+
+  it('does not discover workspace members when auditWorkspaces is false, even if workspaces are declared', () => {
+    vi.mocked(fs.existsSync).mockImplementation((p: unknown) => String(p).endsWith('package.json'))
+    vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({ ...mockPkg, workspaces: ['packages/*'] }))
+    const result = discoverPackages('package.json', [], false, false, false, false)
+    const names = result.map(p => p.name)
+    expect(names).toEqual(['axios', 'lodash'])
+  })
+
+  it('does not discover workspace members when no workspace config is found, even if auditWorkspaces is true', () => {
+    const result = discoverPackages('package.json', [], false, false, false, true)
+    const names = result.map(p => p.name)
+    expect(names).toEqual(['axios', 'lodash'])
+  })
+
+  it('aggregates a workspace member package alongside the root when auditWorkspaces is true', () => {
+    // discoverPackages calls the REAL fs module for reads/existsSync checks, but must go through
+    // a mocked src/workspaces module for glob-based member discovery, since fast-glob does real
+    // filesystem traversal that a blanket vi.mock('fs') would break (Task 1 tests this file's
+    // own two functions directly, against real temp directories, for that reason). Mocking
+    // src/workspaces per-test with vi.doMock + a fresh dynamic import isolates discover.ts's own
+    // aggregation logic from workspaces.ts's actual glob mechanics.
+    vi.doMock('../src/workspaces', () => ({
+      getWorkspaceGlobs: () => ['packages/*'],
+      discoverWorkspaceMembers: () => ['packages/foo'],
+    }))
+    vi.mocked(fs.readFileSync).mockImplementation((p: unknown) => {
+      // Check the more specific (member) path before the generic root check, since both paths
+      // end in "package.json" — order matters here.
+      if (String(p).endsWith('packages/foo/package.json')) {
+        return JSON.stringify({ dependencies: { 'member-only-pkg': '^1.0.0' } })
+      }
+      if (String(p).endsWith('package.json')) return JSON.stringify({ ...mockPkg, workspaces: ['packages/*'] })
+      throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
+    })
+    return import('../src/discover').then(({ discoverPackages: freshDiscoverPackages }) => {
+      const result = freshDiscoverPackages('package.json', [], false, false, false, true)
+      const names = result.map(p => p.name)
+      expect(names).toContain('axios')
+      expect(names).toContain('member-only-pkg')
+    })
+  })
+
+  it('dedupes a package resolved to the same version by both the root and a workspace member', () => {
+    vi.doMock('../src/workspaces', () => ({
+      getWorkspaceGlobs: () => ['packages/*'],
+      discoverWorkspaceMembers: () => ['packages/foo'],
+    }))
+    vi.mocked(fs.existsSync).mockImplementation((p: unknown) =>
+      String(p).endsWith('package.json') || String(p).endsWith('package-lock.json')
+    )
+    vi.mocked(fs.readFileSync).mockImplementation((p: unknown) => {
+      if (String(p).endsWith('package-lock.json')) {
+        return JSON.stringify({ lockfileVersion: 3, packages: { 'node_modules/axios': { version: '1.7.4' } } })
+      }
+      if (String(p).endsWith('packages/foo/package.json')) {
+        return JSON.stringify({ dependencies: { axios: '^1.0.0' } })
+      }
+      return JSON.stringify({ ...mockPkg, workspaces: ['packages/*'] })
+    })
+    return import('../src/discover').then(({ discoverPackages: freshDiscoverPackages }) => {
+      const result = freshDiscoverPackages('package.json', [], false, false, true, true)
+      expect(result.filter(p => p.name === 'axios')).toEqual([{ name: 'axios', version: '1.7.4' }])
+    })
   })
 })

@@ -2,6 +2,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { resolveLockfileVersions } from './lockfiles'
 import type { NamedRange } from './lockfiles'
+import { getWorkspaceGlobs, discoverWorkspaceMembers } from './workspaces'
 
 interface PackageJson {
   dependencies?: Record<string, string>
@@ -14,21 +15,21 @@ export interface DiscoveredPackage {
   version: string | null
 }
 
-export function discoverPackages(
+interface ScopedRange {
+  name: string
+  range: string | undefined
+  memberPath: string | undefined
+}
+
+function readPackageRanges(
   packageJsonPath: string,
   explicitPackages: string[],
   includeDev: boolean,
   includeOptional: boolean,
-  useLockfile: boolean,
-): DiscoveredPackage[] {
-  const absPath = path.resolve(
-    process.env['GITHUB_WORKSPACE'] ?? process.cwd(),
-    packageJsonPath,
-  )
-
+): Map<string, string> {
   let pkg: PackageJson = {}
   try {
-    pkg = JSON.parse(fs.readFileSync(absPath, 'utf8') as string) as PackageJson
+    pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8') as string) as PackageJson
   } catch (err) {
     if (explicitPackages.length === 0) throw err
     // packages input is a deliberate override that works standalone —
@@ -43,15 +44,71 @@ export function discoverPackages(
   if (includeOptional) {
     for (const [name, range] of Object.entries(pkg.optionalDependencies ?? {})) ranges.set(name, range)
   }
+  return ranges
+}
 
-  const names = explicitPackages.length > 0 ? [...new Set(explicitPackages)] : [...ranges.keys()]
+export function discoverPackages(
+  packageJsonPath: string,
+  explicitPackages: string[],
+  includeDev: boolean,
+  includeOptional: boolean,
+  useLockfile: boolean,
+  auditWorkspaces: boolean,
+): DiscoveredPackage[] {
+  const absPath = path.resolve(
+    process.env['GITHUB_WORKSPACE'] ?? process.cwd(),
+    packageJsonPath,
+  )
+  const lockfileDir = path.dirname(absPath)
 
-  if (!useLockfile) {
-    return names.map(name => ({ name, version: null }))
+  const rootRanges = readPackageRanges(absPath, explicitPackages, includeDev, includeOptional)
+
+  const scoped: ScopedRange[] = []
+
+  if (explicitPackages.length > 0) {
+    for (const name of new Set(explicitPackages)) {
+      scoped.push({ name, range: rootRanges.get(name), memberPath: undefined })
+    }
+  } else {
+    for (const name of rootRanges.keys()) {
+      scoped.push({ name, range: rootRanges.get(name), memberPath: undefined })
+    }
+
+    if (auditWorkspaces) {
+      const globs = getWorkspaceGlobs(lockfileDir)
+      if (globs) {
+        for (const memberPath of discoverWorkspaceMembers(lockfileDir, globs)) {
+          const memberPackageJsonPath = path.join(lockfileDir, memberPath, 'package.json')
+          const memberRanges = readPackageRanges(memberPackageJsonPath, [], includeDev, includeOptional)
+          for (const name of memberRanges.keys()) {
+            scoped.push({ name, range: memberRanges.get(name), memberPath })
+          }
+        }
+      }
+    }
   }
 
-  const namedRanges: NamedRange[] = names.map(name => ({ name, range: ranges.get(name) }))
-  const resolved = resolveLockfileVersions(path.dirname(absPath), namedRanges)
+  if (!useLockfile) {
+    const deduped = new Map<string, DiscoveredPackage>()
+    for (const { name } of scoped) deduped.set(name, { name, version: null })
+    return [...deduped.values()]
+  }
 
-  return names.map(name => ({ name, version: resolved.get(name) ?? null }))
+  const byMember = new Map<string | undefined, NamedRange[]>()
+  for (const { name, range, memberPath } of scoped) {
+    if (!byMember.has(memberPath)) byMember.set(memberPath, [])
+    byMember.get(memberPath)!.push({ name, range })
+  }
+
+  const resolvedByMember = new Map<string | undefined, Map<string, string>>()
+  for (const [memberPath, namedRanges] of byMember) {
+    resolvedByMember.set(memberPath, resolveLockfileVersions(lockfileDir, namedRanges, memberPath))
+  }
+
+  const deduped = new Map<string, DiscoveredPackage>()
+  for (const { name, memberPath } of scoped) {
+    const version = resolvedByMember.get(memberPath)!.get(name) ?? null
+    deduped.set(`${name}@${version ?? ''}`, { name, version })
+  }
+  return [...deduped.values()]
 }
