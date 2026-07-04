@@ -12,14 +12,3 @@ export interface Thresholds {
   automation: number | null
   risk: number | null
 }
-
-export interface ActionInputs {
-  apiKey: string
-  packageJsonPath: string
-  explicitPackages: string[]
-  includeDev: boolean
-  includeOptional: boolean
-  thresholds: Thresholds
-  prComment: boolean
-  crawlTimeout: number
-}
