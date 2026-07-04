@@ -30,6 +30,7 @@ Get a free API key at [packagerating.com](https://packagerating.com).
 | `include-dev` | no | `false` | Include `devDependencies` |
 | `include-optional` | no | `false` | Include `optionalDependencies` |
 | `use-lockfile` | no | `true` | Resolve exact installed versions from the lockfile instead of scoring latest |
+| `audit-workspaces` | no | `true` | Discover and score every workspace member in a monorepo |
 | `fail-on-general` | no | — | Fail if any package `general_score` is below this (0–100) |
 | `fail-on-automation` | no | — | Fail if any package `automation_score` is below this (0–100) |
 | `fail-on-risk` | no | — | Fail if any package `risk_score` is above this (0–100) — higher risk_score means riskier |
@@ -53,6 +54,19 @@ since only the lockfile is read, never `node_modules`.
 
 Set `use-lockfile: false` to always score latest, regardless of what
 lockfile is present.
+
+## Monorepo / workspace support
+
+If the root `package.json` declares a `"workspaces"` field (npm/yarn) or a `pnpm-workspace.yaml`
+file exists, this action automatically discovers every workspace member and scores the
+deduplicated union of all their dependencies — not just the root project's. Two members
+depending on the exact same resolved version of a package produce one row in the report; two
+members resolving to genuinely different versions of the same package both appear.
+
+If no workspace configuration is found, behavior is unchanged — only the root `package.json` is
+audited, same as a non-monorepo project.
+
+Set `audit-workspaces: false` to only audit the root `package.json`, even in a real monorepo.
 
 ## Outputs
 

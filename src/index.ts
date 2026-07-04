@@ -49,6 +49,7 @@ export async function run(): Promise<void> {
     core.getInput('include-dev') === 'true',
     core.getInput('include-optional') === 'true',
     core.getInput('use-lockfile') !== 'false',
+    core.getInput('audit-workspaces') !== 'false',
   )
 
   core.info(`Scoring ${names.length} package(s)...`)

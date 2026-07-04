@@ -58,4 +58,23 @@ describe('resolveLockfileVersions', () => {
     const result = resolveLockfileVersions('/repo', [{ name: 'axios', range: '^1.0.0' }])
     expect(result.get('axios')).toBe('1.7.4')
   })
+
+  it('threads memberPath through to the npm parser', () => {
+    vi.mocked(fs.existsSync).mockImplementation(p => String(p).endsWith('package-lock.json'))
+    vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({
+      lockfileVersion: 3,
+      packages: { 'packages/foo/node_modules/axios': { version: '1.7.4' } },
+    }))
+    const result = resolveLockfileVersions('/repo', [{ name: 'axios', range: '^1.0.0' }], 'packages/foo')
+    expect(result.get('axios')).toBe('1.7.4')
+  })
+
+  it('threads memberPath through to the pnpm parser', () => {
+    vi.mocked(fs.existsSync).mockImplementation(p => String(p).endsWith('pnpm-lock.yaml'))
+    vi.mocked(fs.readFileSync).mockReturnValue(
+      "lockfileVersion: '9.0'\nimporters:\n  packages/foo:\n    dependencies:\n      axios:\n        specifier: ^1.0.0\n        version: 1.7.4\n"
+    )
+    const result = resolveLockfileVersions('/repo', [{ name: 'axios', range: '^1.0.0' }], 'packages/foo')
+    expect(result.get('axios')).toBe('1.7.4')
+  })
 })

@@ -25,9 +25,10 @@ function extractVersion(entry: PnpmDepEntry | undefined): string | undefined {
 export function resolvePnpmVersions(
   lockfileContent: string,
   packages: NamedRange[],
+  memberPath?: string,
 ): Map<string, string> {
   const lockfile = yaml.load(lockfileContent) as PnpmLockfile
-  const scope: PnpmScope = lockfile.importers?.['.'] ?? lockfile
+  const scope: PnpmScope = lockfile.importers?.[memberPath ?? '.'] ?? lockfile
 
   const resolved = new Map<string, string>()
   for (const { name } of packages) {
