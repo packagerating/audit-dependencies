@@ -188,4 +188,62 @@ describe('discoverPackages', () => {
       expect(result.filter(p => p.name === 'axios')).toEqual([{ name: 'axios', version: '1.7.4' }])
     })
   })
+
+  it('keeps both entries distinct when the root and a workspace member resolve genuinely different versions of the same package', () => {
+    vi.doMock('../src/workspaces', () => ({
+      getWorkspaceGlobs: () => ['packages/*'],
+      discoverWorkspaceMembers: () => ['packages/foo'],
+    }))
+    vi.mocked(fs.existsSync).mockImplementation((p: unknown) =>
+      String(p).endsWith('package.json') || String(p).endsWith('package-lock.json')
+    )
+    vi.mocked(fs.readFileSync).mockImplementation((p: unknown) => {
+      if (String(p).endsWith('package-lock.json')) {
+        // No root-hoisted node_modules/axios entry: the root resolves its ^1.0.0 range via the
+        // legacy v1 dependencies tree, while the member's ^2.0.0 range resolves via the nested
+        // <memberPath>/node_modules/axios fallback (Task 2). This is the one combination that
+        // genuinely yields two different resolved versions for the same name: when a root-hoisted
+        // entry IS present it always wins for both root and member lookups (see "prefers the
+        // root-hoisted entry over the nested member path when both exist" in
+        // tests/lockfiles/npm.test.ts), so root and member would otherwise collapse to one version.
+        return JSON.stringify({
+          lockfileVersion: 3,
+          packages: { 'packages/foo/node_modules/axios': { version: '2.0.0' } },
+          dependencies: { axios: { version: '1.7.4' } },
+        })
+      }
+      if (String(p).endsWith('packages/foo/package.json')) {
+        return JSON.stringify({ dependencies: { axios: '^2.0.0' } })
+      }
+      return JSON.stringify({ ...mockPkg, workspaces: ['packages/*'] }) // root declares axios: '^1.0.0'
+    })
+    return import('../src/discover').then(({ discoverPackages: freshDiscoverPackages }) => {
+      const result = freshDiscoverPackages('package.json', [], false, false, true, true)
+      const axiosEntries = result.filter(p => p.name === 'axios')
+      expect(axiosEntries).toHaveLength(2)
+      expect(axiosEntries).toEqual(expect.arrayContaining([
+        { name: 'axios', version: '1.7.4' },
+        { name: 'axios', version: '2.0.0' },
+      ]))
+    })
+  })
+
+  it('never triggers workspace discovery when explicitPackages is non-empty, even if auditWorkspaces is true and a workspace config exists', () => {
+    vi.doMock('../src/workspaces', () => ({
+      getWorkspaceGlobs: () => ['packages/*'],
+      discoverWorkspaceMembers: () => ['packages/bait'],
+    }))
+    vi.mocked(fs.existsSync).mockImplementation((p: unknown) => String(p).endsWith('package.json'))
+    vi.mocked(fs.readFileSync).mockImplementation((p: unknown) => {
+      if (String(p).endsWith('packages/bait/package.json')) {
+        return JSON.stringify({ dependencies: { 'workspace-only-pkg': '^1.0.0' } })
+      }
+      return JSON.stringify({ ...mockPkg, workspaces: ['packages/*'] })
+    })
+    return import('../src/discover').then(({ discoverPackages: freshDiscoverPackages }) => {
+      const result = freshDiscoverPackages('package.json', ['react'], false, false, false, true)
+      expect(result).toEqual([{ name: 'react', version: null }])
+      expect(result.map(p => p.name)).not.toContain('workspace-only-pkg')
+    })
+  })
 })
