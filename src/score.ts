@@ -33,12 +33,7 @@ function emptyScore(name: string, status: PackageScore['status']): PackageScore 
   return { name, version: null, generalScore: null, automationScore: null, riskScore: null, status }
 }
 
-async function fetchScore(name: string, version: string | null, apiKey: string): Promise<PackageScore | 'not-found'> {
-  const res = await fetch(buildUrl(name, version), { headers: { 'x-api-key': apiKey } })
-  if (res.status === 404) return 'not-found'
-  if (!res.ok) throw new Error(`GET /packages/${name} returned ${res.status}`)
-
-  const data = await res.json() as ApiPackageResponse
+function parseApiResponse(name: string, data: ApiPackageResponse): PackageScore | 'not-found' {
   if (data.general_score == null && data.automation_score == null && data.risk_score == null) {
     return 'not-found'
   }
@@ -51,6 +46,15 @@ async function fetchScore(name: string, version: string | null, apiKey: string):
     riskScore: data.risk_score ?? null,
     status: 'scored',
   }
+}
+
+async function fetchScore(name: string, version: string | null, apiKey: string): Promise<PackageScore | 'not-found'> {
+  const res = await fetch(buildUrl(name, version), { headers: { 'x-api-key': apiKey } })
+  if (res.status === 404) return 'not-found'
+  if (!res.ok) throw new Error(`GET /packages/${name} returned ${res.status}`)
+
+  const data = await res.json() as ApiPackageResponse
+  return parseApiResponse(name, data)
 }
 
 async function pollJob(
@@ -107,18 +111,8 @@ async function fetchOrCrawl(
     if (!res.ok) return emptyScore(name, 'crawl-error')
 
     const data = await res.json() as ApiPackageResponse
-    if (data.general_score == null && data.automation_score == null && data.risk_score == null) {
-      return emptyScore(name, 'unscored')
-    }
-
-    return {
-      name,
-      version: data.version ?? null,
-      generalScore: data.general_score ?? null,
-      automationScore: data.automation_score ?? null,
-      riskScore: data.risk_score ?? null,
-      status: 'scored',
-    }
+    const result = parseApiResponse(name, data)
+    return result === 'not-found' ? emptyScore(name, 'unscored') : result
   } catch {
     return emptyScore(name, 'crawl-error')
   }
