@@ -2,6 +2,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { resolveNpmVersions } from './npm'
 import { resolveYarnVersions } from './yarn'
+import { resolveYarnBerryVersions } from './yarnBerry'
 import { resolvePnpmVersions } from './pnpm'
 import type { NamedRange } from './types'
 
@@ -18,7 +19,10 @@ export function resolveLockfileVersions(
 
   const yarnPath = path.join(lockfileDir, 'yarn.lock')
   if (fs.existsSync(yarnPath)) {
-    return resolveYarnVersions(fs.readFileSync(yarnPath, 'utf8'), packages)
+    const yarnContent = fs.readFileSync(yarnPath, 'utf8')
+    return yarnContent.includes('__metadata:')
+      ? resolveYarnBerryVersions(yarnContent, packages)
+      : resolveYarnVersions(yarnContent, packages)
   }
 
   const pnpmPath = path.join(lockfileDir, 'pnpm-lock.yaml')
