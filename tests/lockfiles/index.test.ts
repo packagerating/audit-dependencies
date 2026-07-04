@@ -49,4 +49,13 @@ describe('resolveLockfileVersions', () => {
     const result = resolveLockfileVersions('/repo', [{ name: 'axios', range: '^1.0.0' }])
     expect(result.size).toBe(0)
   })
+
+  it('uses the yarn Berry parser when yarn.lock contains a __metadata: block', () => {
+    vi.mocked(fs.existsSync).mockImplementation(p => String(p).endsWith('yarn.lock'))
+    vi.mocked(fs.readFileSync).mockReturnValue(
+      '__metadata:\n  version: 8\n  cacheKey: 10c0\n\n"axios@npm:^1.0.0":\n  version: 1.7.4\n'
+    )
+    const result = resolveLockfileVersions('/repo', [{ name: 'axios', range: '^1.0.0' }])
+    expect(result.get('axios')).toBe('1.7.4')
+  })
 })
