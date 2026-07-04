@@ -29,12 +29,29 @@ Get a free API key at [packagerating.com](https://packagerating.com).
 | `packages` | no | — | Comma-separated package list (overrides `package.json` discovery) |
 | `include-dev` | no | `false` | Include `devDependencies` |
 | `include-optional` | no | `false` | Include `optionalDependencies` |
+| `use-lockfile` | no | `true` | Resolve exact installed versions from the lockfile instead of scoring latest |
 | `fail-on-general` | no | — | Fail if any package `general_score` is below this (0–100) |
 | `fail-on-automation` | no | — | Fail if any package `automation_score` is below this (0–100) |
 | `fail-on-risk` | no | — | Fail if any package `risk_score` is above this (0–100) — higher risk_score means riskier |
 | `pr-comment` | no | `true` | Post/update a PR comment with the score table |
 | `github-token` | no | `${{ github.token }}` | Token used to post/update the PR comment |
 | `crawl-timeout` | no | `120` | Seconds to wait for an on-demand crawl of unscored packages |
+
+## Version resolution
+
+By default, this action resolves each package's exact installed version from
+your lockfile (`package-lock.json`, `yarn.lock`, or `pnpm-lock.yaml` — checked
+in that order) and scores that specific version, rather than whatever
+packagerating.com considers "latest." A package not found in the lockfile
+(or no lockfile present at all) falls back to scoring latest for that package
+only — never a hard failure.
+
+Supported: npm (`package-lock.json`, all lockfile versions), yarn Classic
+(`yarn.lock` v1), and pnpm (`pnpm-lock.yaml`). Not supported: Yarn Berry
+(v2+) and PnP mode — falls back to latest, same as no lockfile found.
+
+Set `use-lockfile: false` to always score latest, regardless of what
+lockfile is present.
 
 ## Outputs
 
