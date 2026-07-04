@@ -25,7 +25,7 @@ describe('run() integration', () => {
     getInputMock = vi.fn()
     setOutputMock = vi.fn()
     setFailedMock = vi.fn()
-    discoverPackagesMock = vi.fn().mockReturnValue(['left-pad'])
+    discoverPackagesMock = vi.fn().mockReturnValue([{ name: 'left-pad', version: null }])
     scorePackagesMock = vi.fn().mockResolvedValue([scoredPkg('left-pad', 80, 80, 80)])
     writeJobSummaryMock = vi.fn().mockResolvedValue(undefined)
     upsertPrCommentMock = vi.fn().mockResolvedValue(undefined)
@@ -62,6 +62,7 @@ describe('run() integration', () => {
       packages: '',
       'include-dev': 'false',
       'include-optional': 'false',
+      'use-lockfile': 'true',
       'fail-on-general': '',
       'fail-on-automation': '',
       'fail-on-risk': '',
@@ -75,6 +76,18 @@ describe('run() integration', () => {
     const { run } = await import('../src/index')
     await run()
   }
+
+  it('passes useLockfile=true to discoverPackages by default', async () => {
+    await runWithInputs({})
+    const args = discoverPackagesMock.mock.calls[0]!
+    expect(args[4]).toBe(true)
+  })
+
+  it('passes useLockfile=false to discoverPackages when use-lockfile input is "false"', async () => {
+    await runWithInputs({ 'use-lockfile': 'false' })
+    const args = discoverPackagesMock.mock.calls[0]!
+    expect(args[4]).toBe(false)
+  })
 
   it('reads the github-token input and passes it through to upsertPrComment', async () => {
     await runWithInputs({})
