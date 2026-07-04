@@ -26,6 +26,10 @@ jobs:
           git add dist/index.js
           git diff --staged --quiet || git commit -m "chore: build dist for ${{ github.ref_name }}"
           git push origin HEAD:main
+      - name: Move version tag to the dist-build commit
+        run: |
+          git tag -f "${{ github.ref_name }}"
+          git push origin "${{ github.ref_name }}" --force
       - name: Create GitHub Release
         run: gh release create "${{ github.ref_name }}" --generate-notes
         env:
