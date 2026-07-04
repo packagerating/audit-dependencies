@@ -17,23 +17,27 @@ correctly auditing a non-root workspace member today, let alone all of them at o
 
 ### Workspace detection (`src/workspaces.ts`, new)
 
-A monorepo is detected using the same ecosystem the lockfile dispatcher (`src/lockfiles/index.ts`)
-already identifies from the root lockfile's presence:
+A monorepo is detected by checking, unconditionally, for either workspace-config file — no
+`ecosystem` hint needed, since the two signals are mutually exclusive in practice (a repo uses one
+package manager):
 
+- **pnpm:** a `pnpm-workspace.yaml` file at the root, with its own `packages: string[]` field
+  (parsed with `js-yaml`, already a dependency since the pnpm lockfile parser needs it). Checked
+  first — if present, it takes priority over anything in `package.json`.
 - **npm / Yarn (Classic or Berry):** root `package.json` has a `"workspaces"` field — either
   `string[]` (glob patterns directly) or `{ packages: string[] }` (the object form some projects
-  use). Either shape yields a `string[]` of glob patterns.
-- **pnpm:** a separate `pnpm-workspace.yaml` file at the root, with its own `packages: string[]`
-  field (parsed with `js-yaml`, already a dependency since the pnpm lockfile parser needs it).
+  use). Either shape yields a `string[]` of glob patterns. Checked only if `pnpm-workspace.yaml`
+  is absent.
 
-If neither is present for the detected ecosystem, there are no workspaces — behavior is completely
-unchanged from today's single-`package.json` flow.
+If neither is present, there are no workspaces — behavior is completely unchanged from today's
+single-`package.json` flow.
 
 ```typescript
-export function getWorkspaceGlobs(rootDir: string, ecosystem: 'npm' | 'yarn' | 'pnpm'): string[] | null
+export function getWorkspaceGlobs(rootDir: string): string[] | null
 ```
 
-Returns `null` when no workspace configuration is found (signals "not a monorepo").
+Returns `null` when no workspace configuration is found (signals "not a monorepo"), or when a
+found config's `packages`/`workspaces` field is itself empty or absent.
 
 ### Member discovery
 
