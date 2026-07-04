@@ -11,10 +11,11 @@ export type { NamedRange } from './types'
 export function resolveLockfileVersions(
   lockfileDir: string,
   packages: NamedRange[],
+  memberPath?: string,
 ): Map<string, string> {
   const npmPath = path.join(lockfileDir, 'package-lock.json')
   if (fs.existsSync(npmPath)) {
-    return resolveNpmVersions(fs.readFileSync(npmPath, 'utf8'), packages)
+    return resolveNpmVersions(fs.readFileSync(npmPath, 'utf8'), packages, memberPath)
   }
 
   const yarnPath = path.join(lockfileDir, 'yarn.lock')
@@ -27,7 +28,7 @@ export function resolveLockfileVersions(
 
   const pnpmPath = path.join(lockfileDir, 'pnpm-lock.yaml')
   if (fs.existsSync(pnpmPath)) {
-    return resolvePnpmVersions(fs.readFileSync(pnpmPath, 'utf8'), packages)
+    return resolvePnpmVersions(fs.readFileSync(pnpmPath, 'utf8'), packages, memberPath)
   }
 
   return new Map()

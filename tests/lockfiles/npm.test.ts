@@ -45,4 +45,39 @@ describe('resolveNpmVersions', () => {
     const result = resolveNpmVersions(lockfile, [{ name: 'fallback-pkg', range: '^9.0.0' }])
     expect(result.get('fallback-pkg')).toBe('9.9.9')
   })
+
+  it('falls back to a nested workspace-member path when the root packages map lacks the entry', () => {
+    const lockfile = JSON.stringify({
+      lockfileVersion: 3,
+      packages: {
+        '': { name: 'root' },
+        'packages/foo/node_modules/conflicted-pkg': { version: '2.0.0' },
+      },
+    })
+    const result = resolveNpmVersions(lockfile, [{ name: 'conflicted-pkg', range: '^2.0.0' }], 'packages/foo')
+    expect(result.get('conflicted-pkg')).toBe('2.0.0')
+  })
+
+  it('prefers the root-hoisted entry over the nested member path when both exist', () => {
+    const lockfile = JSON.stringify({
+      lockfileVersion: 3,
+      packages: {
+        'node_modules/axios': { version: '1.7.4' },
+        'packages/foo/node_modules/axios': { version: '1.6.0' },
+      },
+    })
+    const result = resolveNpmVersions(lockfile, [{ name: 'axios', range: '^1.0.0' }], 'packages/foo')
+    expect(result.get('axios')).toBe('1.7.4')
+  })
+
+  it('does not use nested-member fallback when memberPath is not provided', () => {
+    const lockfile = JSON.stringify({
+      lockfileVersion: 3,
+      packages: {
+        'packages/foo/node_modules/conflicted-pkg': { version: '2.0.0' },
+      },
+    })
+    const result = resolveNpmVersions(lockfile, [{ name: 'conflicted-pkg', range: '^2.0.0' }])
+    expect(result.has('conflicted-pkg')).toBe(false)
+  })
 })
