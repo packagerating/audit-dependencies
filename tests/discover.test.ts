@@ -199,17 +199,16 @@ describe('discoverPackages', () => {
     )
     vi.mocked(fs.readFileSync).mockImplementation((p: unknown) => {
       if (String(p).endsWith('package-lock.json')) {
-        // No root-hoisted node_modules/axios entry: the root resolves its ^1.0.0 range via the
-        // legacy v1 dependencies tree, while the member's ^2.0.0 range resolves via the nested
-        // <memberPath>/node_modules/axios fallback (Task 2). This is the one combination that
-        // genuinely yields two different resolved versions for the same name: when a root-hoisted
-        // entry IS present it always wins for both root and member lookups (see "prefers the
-        // root-hoisted entry over the nested member path when both exist" in
-        // tests/lockfiles/npm.test.ts), so root and member would otherwise collapse to one version.
+        // Root's hoisted node_modules/axios entry and the member's own conflicting nested entry
+        // both exist in the same packages map. The root lookup (no memberPath) resolves to the
+        // root-hoisted version; the member lookup (memberPath set) prefers its own nested entry
+        // over the root-hoisted one (Task 2 fix), so the two lookups genuinely diverge.
         return JSON.stringify({
           lockfileVersion: 3,
-          packages: { 'packages/foo/node_modules/axios': { version: '2.0.0' } },
-          dependencies: { axios: { version: '1.7.4' } },
+          packages: {
+            'node_modules/axios': { version: '1.7.4' },
+            'packages/foo/node_modules/axios': { version: '2.0.0' },
+          },
         })
       }
       if (String(p).endsWith('packages/foo/package.json')) {

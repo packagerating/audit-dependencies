@@ -58,7 +58,7 @@ describe('resolveNpmVersions', () => {
     expect(result.get('conflicted-pkg')).toBe('2.0.0')
   })
 
-  it('prefers the root-hoisted entry over the nested member path when both exist', () => {
+  it('prefers the nested member-specific entry over the root-hoisted entry when both exist', () => {
     const lockfile = JSON.stringify({
       lockfileVersion: 3,
       packages: {
@@ -67,7 +67,7 @@ describe('resolveNpmVersions', () => {
       },
     })
     const result = resolveNpmVersions(lockfile, [{ name: 'axios', range: '^1.0.0' }], 'packages/foo')
-    expect(result.get('axios')).toBe('1.7.4')
+    expect(result.get('axios')).toBe('1.6.0')
   })
 
   it('does not use nested-member fallback when memberPath is not provided', () => {
