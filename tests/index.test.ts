@@ -63,6 +63,7 @@ describe('run() integration', () => {
       'include-dev': 'false',
       'include-optional': 'false',
       'use-lockfile': 'true',
+      'audit-workspaces': 'true',
       'fail-on-general': '',
       'fail-on-automation': '',
       'fail-on-risk': '',
@@ -87,6 +88,18 @@ describe('run() integration', () => {
     await runWithInputs({ 'use-lockfile': 'false' })
     const args = discoverPackagesMock.mock.calls[0]!
     expect(args[4]).toBe(false)
+  })
+
+  it('passes auditWorkspaces=true to discoverPackages by default', async () => {
+    await runWithInputs({})
+    const args = discoverPackagesMock.mock.calls[0]!
+    expect(args[5]).toBe(true)
+  })
+
+  it('passes auditWorkspaces=false to discoverPackages when audit-workspaces input is "false"', async () => {
+    await runWithInputs({ 'audit-workspaces': 'false' })
+    const args = discoverPackagesMock.mock.calls[0]!
+    expect(args[5]).toBe(false)
   })
 
   it('reads the github-token input and passes it through to upsertPrComment', async () => {
