@@ -26,6 +26,10 @@ inputs:
     description: 'Resolve exact installed versions from the lockfile (package-lock.json, yarn.lock, or pnpm-lock.yaml) instead of scoring latest'
     required: false
     default: 'true'
+  audit-workspaces:
+    description: 'Discover and score every workspace member (npm/yarn "workspaces" field, or pnpm-workspace.yaml). Set to false to only audit the root package.json.'
+    required: false
+    default: 'true'
   fail-on-general:
     description: 'Fail if any package general_score is below this threshold (0–100)'
     required: false
