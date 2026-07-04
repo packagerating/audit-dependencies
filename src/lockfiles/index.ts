@@ -1,0 +1,30 @@
+import * as fs from 'fs'
+import * as path from 'path'
+import { resolveNpmVersions } from './npm'
+import { resolveYarnVersions } from './yarn'
+import { resolvePnpmVersions } from './pnpm'
+import type { NamedRange } from './types'
+
+export type { NamedRange } from './types'
+
+export function resolveLockfileVersions(
+  lockfileDir: string,
+  packages: NamedRange[],
+): Map<string, string> {
+  const npmPath = path.join(lockfileDir, 'package-lock.json')
+  if (fs.existsSync(npmPath)) {
+    return resolveNpmVersions(fs.readFileSync(npmPath, 'utf8'), packages)
+  }
+
+  const yarnPath = path.join(lockfileDir, 'yarn.lock')
+  if (fs.existsSync(yarnPath)) {
+    return resolveYarnVersions(fs.readFileSync(yarnPath, 'utf8'), packages)
+  }
+
+  const pnpmPath = path.join(lockfileDir, 'pnpm-lock.yaml')
+  if (fs.existsSync(pnpmPath)) {
+    return resolvePnpmVersions(fs.readFileSync(pnpmPath, 'utf8'), packages)
+  }
+
+  return new Map()
+}
