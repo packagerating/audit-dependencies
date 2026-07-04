@@ -1,6 +1,6 @@
 {
   "name": "audit-dependencies",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "private": true,
   "description": "Score your npm dependencies with packagerating.com",
   "main": "dist/index.js",
