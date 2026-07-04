@@ -8,14 +8,18 @@ interface NpmLockfile {
 export function resolveNpmVersions(
   lockfileContent: string,
   packages: NamedRange[],
+  memberPath?: string,
 ): Map<string, string> {
   const lockfile = JSON.parse(lockfileContent) as NpmLockfile
   const resolved = new Map<string, string>()
 
   for (const { name } of packages) {
     const fromPackagesMap = lockfile.packages?.[`node_modules/${name}`]?.version
+    const fromNestedMember = memberPath
+      ? lockfile.packages?.[`${memberPath}/node_modules/${name}`]?.version
+      : undefined
     const fromLegacyTree = lockfile.dependencies?.[name]?.version
-    const version = fromPackagesMap ?? fromLegacyTree
+    const version = fromPackagesMap ?? fromNestedMember ?? fromLegacyTree
     if (version) resolved.set(name, version)
   }
 

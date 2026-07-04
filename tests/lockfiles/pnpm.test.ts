@@ -67,4 +67,44 @@ describe('resolvePnpmVersions', () => {
     const result = resolvePnpmVersions(NEWER_FIXTURE, [{ name: 'missing-pkg', range: '^1.0.0' }])
     expect(result.has('missing-pkg')).toBe(false)
   })
+
+  it('resolves from a non-root importers entry when memberPath is given', () => {
+    const lockfile = `
+lockfileVersion: '9.0'
+
+importers:
+  .:
+    dependencies:
+      root-only-pkg:
+        specifier: ^1.0.0
+        version: 1.0.0
+  packages/foo:
+    dependencies:
+      axios:
+        specifier: ^1.7.4
+        version: 1.7.4
+`
+    const result = resolvePnpmVersions(lockfile, [{ name: 'axios', range: '^1.7.4' }], 'packages/foo')
+    expect(result.get('axios')).toBe('1.7.4')
+  })
+
+  it('does not resolve a non-root member package from the root importer', () => {
+    const lockfile = `
+lockfileVersion: '9.0'
+
+importers:
+  .:
+    dependencies:
+      root-only-pkg:
+        specifier: ^1.0.0
+        version: 1.0.0
+  packages/foo:
+    dependencies:
+      axios:
+        specifier: ^1.7.4
+        version: 1.7.4
+`
+    const result = resolvePnpmVersions(lockfile, [{ name: 'axios', range: '^1.7.4' }])
+    expect(result.has('axios')).toBe(false)
+  })
 })
