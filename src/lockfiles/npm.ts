@@ -14,12 +14,12 @@ export function resolveNpmVersions(
   const resolved = new Map<string, string>()
 
   for (const { name } of packages) {
-    const fromPackagesMap = lockfile.packages?.[`node_modules/${name}`]?.version
     const fromNestedMember = memberPath
       ? lockfile.packages?.[`${memberPath}/node_modules/${name}`]?.version
       : undefined
+    const fromPackagesMap = lockfile.packages?.[`node_modules/${name}`]?.version
     const fromLegacyTree = lockfile.dependencies?.[name]?.version
-    const version = fromPackagesMap ?? fromNestedMember ?? fromLegacyTree
+    const version = fromNestedMember ?? fromPackagesMap ?? fromLegacyTree
     if (version) resolved.set(name, version)
   }
 
