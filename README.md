@@ -46,9 +46,10 @@ packagerating.com considers "latest." A package not found in the lockfile
 (or no lockfile present at all) falls back to scoring latest for that package
 only — never a hard failure.
 
-Supported: npm (`package-lock.json`, all lockfile versions), yarn Classic
-(`yarn.lock` v1), and pnpm (`pnpm-lock.yaml`). Not supported: Yarn Berry
-(v2+) and PnP mode — falls back to latest, same as no lockfile found.
+Supported: npm (`package-lock.json`, all lockfile versions), yarn — both
+Classic (v1) and Berry (v2+), auto-detected from the lockfile content — and
+pnpm (`pnpm-lock.yaml`). Berry's PnP linker mode needs no special handling,
+since only the lockfile is read, never `node_modules`.
 
 Set `use-lockfile: false` to always score latest, regardless of what
 lockfile is present.
