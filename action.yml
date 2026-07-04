@@ -22,6 +22,10 @@ inputs:
     description: 'Include optionalDependencies'
     required: false
     default: 'false'
+  use-lockfile:
+    description: 'Resolve exact installed versions from the lockfile (package-lock.json, yarn.lock, or pnpm-lock.yaml) instead of scoring latest'
+    required: false
+    default: 'true'
   fail-on-general:
     description: 'Fail if any package general_score is below this threshold (0–100)'
     required: false

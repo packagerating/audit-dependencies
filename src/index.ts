@@ -48,6 +48,7 @@ export async function run(): Promise<void> {
     explicitPackages,
     core.getInput('include-dev') === 'true',
     core.getInput('include-optional') === 'true',
+    core.getInput('use-lockfile') !== 'false',
   )
 
   core.info(`Scoring ${names.length} package(s)...`)
