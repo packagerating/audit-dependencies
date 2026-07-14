@@ -30,6 +30,18 @@ inputs:
     description: 'Discover and score every workspace member (npm/yarn "workspaces" field, or pnpm-workspace.yaml). Set to false to only audit the root package.json.'
     required: false
     default: 'true'
+  audit-subprojects:
+    description: 'Discover and score independent package.json directories not covered by workspace protocol (npm/yarn "workspaces" or pnpm-workspace.yaml). Set to false to disable.'
+    required: false
+    default: 'true'
+  subproject-max-depth:
+    description: 'Maximum directory depth (below repo root) to scan for independent package.json files'
+    required: false
+    default: '3'
+  subproject-exclude:
+    description: 'Comma-separated additional glob patterns to exclude from subproject discovery (node_modules, .git, dist, build, coverage, and vendor are always excluded regardless of this input)'
+    required: false
+    default: ''
   fail-on-general:
     description: 'Fail if any package general_score is below this threshold (0–100)'
     required: false
