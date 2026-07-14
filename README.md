@@ -31,6 +31,9 @@ Get a free API key at [packagerating.com](https://packagerating.com).
 | `include-optional` | no | `false` | Include `optionalDependencies` |
 | `use-lockfile` | no | `true` | Resolve exact installed versions from the lockfile instead of scoring latest |
 | `audit-workspaces` | no | `true` | Discover and score every workspace member in a monorepo |
+| `audit-subprojects` | no | `true` | Discover and score independent `package.json` directories not covered by the workspace protocol |
+| `subproject-max-depth` | no | `3` | Maximum directory depth below repo root to scan for independent `package.json` files |
+| `subproject-exclude` | no | — | Comma-separated additional glob patterns to exclude from subproject discovery |
 | `fail-on-general` | no | — | Fail if any package `general_score` is below this (0–100) |
 | `fail-on-automation` | no | — | Fail if any package `automation_score` is below this (0–100) |
 | `fail-on-risk` | no | — | Fail if any package `risk_score` is above this (0–100) — higher risk_score means riskier |
@@ -67,6 +70,26 @@ If no workspace configuration is found, behavior is unchanged — only the root 
 audited, same as a non-monorepo project.
 
 Set `audit-workspaces: false` to only audit the root `package.json`, even in a real monorepo.
+
+## Independent subprojects
+
+Many monorepos aren't declared as a formal workspace at all — they're just several
+independently-managed Node projects living in one git repo, each with its own `package.json`
+**and its own separate lockfile**, with no `"workspaces"` field or `pnpm-workspace.yaml` linking
+them. A repo with a root `package.json` and a separate `admin/package.json` (its own dependencies,
+its own lockfile) is a common example.
+
+By default, this action also discovers these independent subprojects and scores each one's
+dependencies resolved against *its own* lockfile — not the root's. A directory that's already a
+formal workspace member (see above) is never rescanned here, so nothing is double-counted.
+
+Scanning excludes `node_modules` (always, not configurable), and by default also excludes `.git`,
+`dist`, `build`, `coverage`, and `vendor`. Use `subproject-exclude` to add further comma-separated
+glob patterns, and `subproject-max-depth` to control how many directory levels below the repo root
+are scanned (default `3`).
+
+Set `audit-subprojects: false` to disable this discovery entirely and only audit the root
+`package.json` (and, if enabled, formal workspace members).
 
 ## Outputs
 
