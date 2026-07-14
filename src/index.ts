@@ -43,6 +43,11 @@ export async function run(): Promise<void> {
     .map(s => s.trim())
     .filter(Boolean)
 
+  const subprojectExcludeGlobs = core.getInput('subproject-exclude')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean)
+
   const names = discoverPackages(
     core.getInput('package-json-path') || 'package.json',
     explicitPackages,
@@ -50,6 +55,9 @@ export async function run(): Promise<void> {
     core.getInput('include-optional') === 'true',
     core.getInput('use-lockfile') !== 'false',
     core.getInput('audit-workspaces') !== 'false',
+    core.getInput('audit-subprojects') !== 'false',
+    parseInt(core.getInput('subproject-max-depth') || '3', 10),
+    subprojectExcludeGlobs,
   )
 
   core.info(`Scoring ${names.length} package(s)...`)
