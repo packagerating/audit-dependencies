@@ -3,6 +3,7 @@ import * as path from 'path'
 import { resolveLockfileVersions } from './lockfiles'
 import type { NamedRange } from './lockfiles'
 import { getWorkspaceGlobs, discoverWorkspaceMembers } from './workspaces'
+import { discoverSubprojects } from './subprojects'
 
 interface PackageJson {
   dependencies?: Record<string, string>
@@ -19,6 +20,7 @@ interface ScopedRange {
   name: string
   range: string | undefined
   memberPath: string | undefined
+  ownLockfile: boolean
 }
 
 function readPackageRanges(
@@ -54,6 +56,9 @@ export function discoverPackages(
   includeOptional: boolean,
   useLockfile: boolean,
   auditWorkspaces: boolean,
+  auditSubprojects: boolean,
+  subprojectMaxDepth: number,
+  subprojectExcludeGlobs: string[],
 ): DiscoveredPackage[] {
   const absPath = path.resolve(
     process.env['GITHUB_WORKSPACE'] ?? process.cwd(),
@@ -67,22 +72,41 @@ export function discoverPackages(
 
   if (explicitPackages.length > 0) {
     for (const name of new Set(explicitPackages)) {
-      scoped.push({ name, range: rootRanges.get(name), memberPath: undefined })
+      scoped.push({ name, range: rootRanges.get(name), memberPath: undefined, ownLockfile: false })
     }
   } else {
     for (const name of rootRanges.keys()) {
-      scoped.push({ name, range: rootRanges.get(name), memberPath: undefined })
+      scoped.push({ name, range: rootRanges.get(name), memberPath: undefined, ownLockfile: false })
     }
+
+    const workspaceMemberPaths: string[] = []
 
     if (auditWorkspaces) {
       const globs = getWorkspaceGlobs(lockfileDir)
       if (globs) {
         for (const memberPath of discoverWorkspaceMembers(lockfileDir, globs)) {
+          workspaceMemberPaths.push(memberPath)
           const memberPackageJsonPath = path.join(lockfileDir, memberPath, 'package.json')
           const memberRanges = readPackageRanges(memberPackageJsonPath, [], includeDev, includeOptional)
           for (const name of memberRanges.keys()) {
-            scoped.push({ name, range: memberRanges.get(name), memberPath })
+            scoped.push({ name, range: memberRanges.get(name), memberPath, ownLockfile: false })
           }
+        }
+      }
+    }
+
+    if (auditSubprojects) {
+      const subprojectPaths = discoverSubprojects(
+        lockfileDir,
+        subprojectMaxDepth,
+        subprojectExcludeGlobs,
+        workspaceMemberPaths,
+      )
+      for (const memberPath of subprojectPaths) {
+        const subprojectPackageJsonPath = path.join(lockfileDir, memberPath, 'package.json')
+        const subprojectRanges = readPackageRanges(subprojectPackageJsonPath, [], includeDev, includeOptional)
+        for (const name of subprojectRanges.keys()) {
+          scoped.push({ name, range: subprojectRanges.get(name), memberPath, ownLockfile: true })
         }
       }
     }
@@ -94,15 +118,27 @@ export function discoverPackages(
     return [...deduped.values()]
   }
 
+  const resolvedByMember = new Map<string | undefined, Map<string, string>>()
+
   const byMember = new Map<string | undefined, NamedRange[]>()
-  for (const { name, range, memberPath } of scoped) {
+  for (const { name, range, memberPath, ownLockfile } of scoped) {
+    if (ownLockfile) continue
     if (!byMember.has(memberPath)) byMember.set(memberPath, [])
     byMember.get(memberPath)!.push({ name, range })
   }
-
-  const resolvedByMember = new Map<string | undefined, Map<string, string>>()
   for (const [memberPath, namedRanges] of byMember) {
     resolvedByMember.set(memberPath, resolveLockfileVersions(lockfileDir, namedRanges, memberPath))
+  }
+
+  const byOwnMember = new Map<string, NamedRange[]>()
+  for (const { name, range, memberPath, ownLockfile } of scoped) {
+    if (!ownLockfile) continue
+    const mp = memberPath! // always defined for ownLockfile entries — see the push above
+    if (!byOwnMember.has(mp)) byOwnMember.set(mp, [])
+    byOwnMember.get(mp)!.push({ name, range })
+  }
+  for (const [memberPath, namedRanges] of byOwnMember) {
+    resolvedByMember.set(memberPath, resolveLockfileVersions(path.join(lockfileDir, memberPath), namedRanges))
   }
 
   const deduped = new Map<string, DiscoveredPackage>()
