@@ -8,6 +8,12 @@ const MANDATORY_EXCLUDE_GLOBS = [
   '**/build/**',
   '**/coverage/**',
   '**/vendor/**',
+  '**/examples/**',
+  '**/fixtures/**',
+  '**/test/**',
+  '**/tests/**',
+  '**/__tests__/**',
+  '**/e2e/**',
 ]
 
 export function discoverSubprojects(
@@ -20,6 +26,7 @@ export function discoverSubprojects(
     cwd: rootDir,
     ignore: [...MANDATORY_EXCLUDE_GLOBS, ...extraExcludeGlobs],
     dot: false,
+    deep: maxDepth + 1,
   })
 
   const alreadyDiscoveredSet = new Set(alreadyDiscovered)

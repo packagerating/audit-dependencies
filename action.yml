@@ -39,7 +39,7 @@ inputs:
     required: false
     default: '3'
   subproject-exclude:
-    description: 'Comma-separated additional glob patterns to exclude from subproject discovery (node_modules, .git, dist, build, coverage, and vendor are always excluded regardless of this input)'
+    description: 'Comma-separated additional glob patterns to exclude from subproject discovery (node_modules, .git, dist, build, coverage, vendor, examples, fixtures, test, tests, __tests__, and e2e are always excluded regardless of this input)'
     required: false
     default: ''
   fail-on-general:

@@ -129,6 +129,10 @@ describe('run() integration', () => {
     expect(args[7]).toBe(5)
   })
 
+  it('throws a clear error when subproject-max-depth is not a valid non-negative integer', async () => {
+    await expect(runWithInputs({ 'subproject-max-depth': 'abc' })).rejects.toThrow(/Invalid subproject-max-depth/)
+  })
+
   it('passes an empty subprojectExcludeGlobs array to discoverPackages by default', async () => {
     await runWithInputs({})
     const args = discoverPackagesMock.mock.calls[0]!
