@@ -83,10 +83,10 @@ By default, this action also discovers these independent subprojects and scores 
 dependencies resolved against *its own* lockfile — not the root's. A directory that's already a
 formal workspace member (see above) is never rescanned here, so nothing is double-counted.
 
-Scanning excludes `node_modules` (always, not configurable), and by default also excludes `.git`,
-`dist`, `build`, `coverage`, and `vendor`. Use `subproject-exclude` to add further comma-separated
-glob patterns, and `subproject-max-depth` to control how many directory levels below the repo root
-are scanned (default `3`).
+`node_modules`, `.git`, `dist`, `build`, `coverage`, `vendor`, `examples`, `fixtures`, `test`,
+`tests`, `__tests__`, and `e2e` are always excluded from scanning and are not configurable. Use
+`subproject-exclude` to add further comma-separated glob patterns, and `subproject-max-depth` to
+control how many directory levels below the repo root are scanned (default `3`).
 
 Set `audit-subprojects: false` to disable this discovery entirely and only audit the root
 `package.json` (and, if enabled, formal workspace members).

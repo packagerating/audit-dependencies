@@ -70,6 +70,18 @@ describe('discoverSubprojects', () => {
     expect(result).toEqual(['admin'])
   })
 
+  it('always excludes common test-fixture directories (examples, fixtures, test, tests, __tests__, e2e)', () => {
+    makePackage('admin', 'admin')
+    makePackage('examples/demo', 'demo')
+    makePackage('fixtures/fake-project', 'fake')
+    makePackage('test/fixture-app', 'fixture-app')
+    makePackage('tests/fixture-app', 'fixture-app')
+    makePackage('__tests__/fixture-app', 'fixture-app')
+    makePackage('e2e/fixture-app', 'fixture-app')
+    const result = discoverSubprojects(rootDir, 3, [], [])
+    expect(result).toEqual(['admin'])
+  })
+
   it('does not return a path already present in alreadyDiscovered', () => {
     makePackage('packages/foo', 'foo')
     makePackage('admin', 'admin')
