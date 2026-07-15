@@ -64,6 +64,9 @@ describe('run() integration', () => {
       'include-optional': 'false',
       'use-lockfile': 'true',
       'audit-workspaces': 'true',
+      'audit-subprojects': 'true',
+      'subproject-max-depth': '3',
+      'subproject-exclude': '',
       'fail-on-general': '',
       'fail-on-automation': '',
       'fail-on-risk': '',
@@ -100,6 +103,46 @@ describe('run() integration', () => {
     await runWithInputs({ 'audit-workspaces': 'false' })
     const args = discoverPackagesMock.mock.calls[0]!
     expect(args[5]).toBe(false)
+  })
+
+  it('passes auditSubprojects=true to discoverPackages by default', async () => {
+    await runWithInputs({})
+    const args = discoverPackagesMock.mock.calls[0]!
+    expect(args[6]).toBe(true)
+  })
+
+  it('passes auditSubprojects=false to discoverPackages when audit-subprojects input is "false"', async () => {
+    await runWithInputs({ 'audit-subprojects': 'false' })
+    const args = discoverPackagesMock.mock.calls[0]!
+    expect(args[6]).toBe(false)
+  })
+
+  it('passes subprojectMaxDepth=3 to discoverPackages by default', async () => {
+    await runWithInputs({})
+    const args = discoverPackagesMock.mock.calls[0]!
+    expect(args[7]).toBe(3)
+  })
+
+  it('passes a custom subprojectMaxDepth to discoverPackages when subproject-max-depth is set', async () => {
+    await runWithInputs({ 'subproject-max-depth': '5' })
+    const args = discoverPackagesMock.mock.calls[0]!
+    expect(args[7]).toBe(5)
+  })
+
+  it('throws a clear error when subproject-max-depth is not a valid non-negative integer', async () => {
+    await expect(runWithInputs({ 'subproject-max-depth': 'abc' })).rejects.toThrow(/Invalid subproject-max-depth/)
+  })
+
+  it('passes an empty subprojectExcludeGlobs array to discoverPackages by default', async () => {
+    await runWithInputs({})
+    const args = discoverPackagesMock.mock.calls[0]!
+    expect(args[8]).toEqual([])
+  })
+
+  it('parses subproject-exclude into a trimmed array of globs', async () => {
+    await runWithInputs({ 'subproject-exclude': 'fixtures/**, examples/** ' })
+    const args = discoverPackagesMock.mock.calls[0]!
+    expect(args[8]).toEqual(['fixtures/**', 'examples/**'])
   })
 
   it('reads the github-token input and passes it through to upsertPrComment', async () => {

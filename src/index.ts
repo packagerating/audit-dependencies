@@ -11,6 +11,13 @@ function parseThreshold(value: string): number | null {
   return n
 }
 
+function parseSubprojectMaxDepth(value: string): number {
+  if (!value.trim()) return 3
+  const n = parseInt(value, 10)
+  if (isNaN(n) || n < 0) throw new Error(`Invalid subproject-max-depth: "${value}" — must be a non-negative integer`)
+  return n
+}
+
 export function checkThresholds(scores: PackageScore[], thresholds: Thresholds): string[] {
   const failures: string[] = []
   for (const pkg of scores.filter(s => s.status === 'scored')) {
@@ -43,6 +50,11 @@ export async function run(): Promise<void> {
     .map(s => s.trim())
     .filter(Boolean)
 
+  const subprojectExcludeGlobs = core.getInput('subproject-exclude')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean)
+
   const names = discoverPackages(
     core.getInput('package-json-path') || 'package.json',
     explicitPackages,
@@ -50,6 +62,9 @@ export async function run(): Promise<void> {
     core.getInput('include-optional') === 'true',
     core.getInput('use-lockfile') !== 'false',
     core.getInput('audit-workspaces') !== 'false',
+    core.getInput('audit-subprojects') !== 'false',
+    parseSubprojectMaxDepth(core.getInput('subproject-max-depth')),
+    subprojectExcludeGlobs,
   )
 
   core.info(`Scoring ${names.length} package(s)...`)
