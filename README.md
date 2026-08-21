@@ -1,5 +1,9 @@
 # packagerating/audit-dependencies
 
+[![GitHub Marketplace](https://img.shields.io/badge/marketplace-Audit%20Dependencies-blue?logo=github)](https://github.com/marketplace/actions/audit-dependencies)
+[![Release](https://img.shields.io/github/v/release/packagerating/audit-dependencies)](https://github.com/packagerating/audit-dependencies/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 Score your npm dependencies with [packagerating.com](https://packagerating.com) directly in your GitHub Actions workflow. Results appear in the job summary and as a PR comment. Optionally fail the build if any package falls below your quality thresholds.
 
 ## Usage
