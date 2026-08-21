@@ -144,3 +144,24 @@ Risk: inverted — lower is better.
 | 76–100 | Critical risk — abandoned or insecure |
 
 Full score methodology: [packagerating.com/github-action](https://packagerating.com/github-action)
+
+## Releasing
+
+Pushing a `vX.Y.Z` tag is the entire release process — `.github/workflows/release.yml`
+handles everything from there:
+
+1. Rebuilds `dist/index.js` (`npm run build:minify`) and commits it to `main` if it changed
+2. Force-moves the `vX.Y.Z` tag to that commit
+3. Creates the GitHub Release (`gh release create --generate-notes`)
+4. Force-moves the rolling major tag (e.g. `v1`) to the same commit
+
+**Don't do any of these steps manually after pushing the tag** — the workflow does them
+automatically, and manual `git tag -f` / `gh release create` calls race it and can fail with
+`422 tag_name already exists` or silently duplicate its work. If you need to verify the result,
+just check that `main`, `vX.Y.Z`, and the major tag all point at the same commit
+(`git ls-remote origin refs/heads/main refs/tags/vX.Y.Z refs/tags/vN`) once the workflow run
+finishes.
+
+The one step the workflow can't do: after the Release is created, open it on GitHub and check
+"Publish this Action to the GitHub Marketplace" — there's no API for this, so it stays manual
+for every release that should be listed.
