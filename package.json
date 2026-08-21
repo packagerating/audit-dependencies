@@ -2,6 +2,7 @@
   "name": "audit-dependencies",
   "version": "1.6.0",
   "private": true,
+  "license": "MIT",
   "description": "Score your npm dependencies with packagerating.com",
   "main": "dist/index.js",
   "scripts": {
