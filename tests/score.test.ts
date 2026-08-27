@@ -98,16 +98,49 @@ describe('scorePackages', () => {
     expect(result[0]!.status).toBe('crawl-error')
   })
 
-  it('returns crawl-error on a direct 500', async () => {
+  it('returns crawl-error on a direct 500 that persists across retries', async () => {
     mockFetch.mockResolvedValue(serverError())
     const result = await scorePackages([pkg('bad-pkg')], 'key', 10)
     expect(result[0]!.status).toBe('crawl-error')
   })
 
-  it('returns crawl-error on a fetch rejection', async () => {
+  it('returns crawl-error on a fetch rejection that persists across retries', async () => {
     mockFetch.mockRejectedValue(new Error('network error'))
     const result = await scorePackages([pkg('bad-pkg')], 'key', 10)
     expect(result[0]!.status).toBe('crawl-error')
+  })
+
+  it('retries a transient network rejection and returns scored once it recovers', async () => {
+    mockFetch
+      .mockRejectedValueOnce(new Error('ECONNRESET'))
+      .mockResolvedValueOnce(ok({ general_score: 84, automation_score: 88, risk_score: 79 }))
+    const result = await scorePackages([pkg('flaky-pkg')], 'key', 10)
+    expect(result[0]!.status).toBe('scored')
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('retries a transient 500 and returns scored once it recovers', async () => {
+    mockFetch
+      .mockResolvedValueOnce(serverError())
+      .mockResolvedValueOnce(ok({ general_score: 84, automation_score: 88, risk_score: 79 }))
+    const result = await scorePackages([pkg('flaky-pkg')], 'key', 10)
+    expect(result[0]!.status).toBe('scored')
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('retries a transient 429 and returns scored once it recovers', async () => {
+    mockFetch
+      .mockResolvedValueOnce({ status: 429, ok: false, json: () => Promise.resolve({}) })
+      .mockResolvedValueOnce(ok({ general_score: 84, automation_score: 88, risk_score: 79 }))
+    const result = await scorePackages([pkg('throttled-pkg')], 'key', 10)
+    expect(result[0]!.status).toBe('scored')
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not retry a 404 — it is a legitimate not-found signal, not a transient failure', async () => {
+    mockFetch.mockResolvedValue(notFound())
+    await scorePackages([pkg('nonexistent')], 'key', 10)
+    expect(mockFetch).toHaveBeenCalledTimes(1)
   })
 
   it('scores multiple packages concurrently, isolating one failure from the rest', async () => {

@@ -24,6 +24,28 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
+const RETRYABLE_ATTEMPTS = 3
+
+// Promise.all fires every dependency's request fully concurrently with no backpressure — a
+// single transient network blip or a momentary 429/5xx on any one request previously produced
+// a permanent "Crawl error" for that package, indistinguishable from a real backend problem.
+// Retries transient failures (network exceptions, 429, 5xx); returns immediately for anything
+// else (404, other 4xx) since those are legitimate signals the caller already handles.
+async function fetchWithRetry(url: string, options: RequestInit): Promise<Response> {
+  let lastErr: unknown
+  for (let attempt = 0; attempt < RETRYABLE_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch(url, options)
+      if (res.status !== 429 && res.status < 500) return res
+      lastErr = new Error(`HTTP ${res.status}`)
+    } catch (err) {
+      lastErr = err
+    }
+    if (attempt < RETRYABLE_ATTEMPTS - 1) await sleep(300 * Math.pow(2, attempt))
+  }
+  throw lastErr
+}
+
 function buildUrl(name: string, version: string | null): string {
   const base = `${API_BASE}/packages/${encodeURIComponent(name)}`
   return version ? `${base}?version=${encodeURIComponent(version)}` : base
@@ -49,7 +71,7 @@ function parseApiResponse(name: string, data: ApiPackageResponse): PackageScore 
 }
 
 async function fetchScore(name: string, version: string | null, apiKey: string): Promise<PackageScore | 'not-found'> {
-  const res = await fetch(buildUrl(name, version), { headers: { 'x-api-key': apiKey } })
+  const res = await fetchWithRetry(buildUrl(name, version), { headers: { 'x-api-key': apiKey } })
   if (res.status === 404) return 'not-found'
   if (!res.ok) throw new Error(`GET /packages/${name} returned ${res.status}`)
 
@@ -98,7 +120,7 @@ async function fetchOrCrawl(
   timeoutMs: number,
 ): Promise<PackageScore> {
   try {
-    const res = await fetch(buildUrl(name, version), { headers: { 'x-api-key': apiKey } })
+    const res = await fetchWithRetry(buildUrl(name, version), { headers: { 'x-api-key': apiKey } })
 
     if (res.status === 404) return emptyScore(name, 'unscored')
 
