@@ -1,0 +1,21 @@
+name: Audit Dependencies
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  audit:
+    name: Score npm dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: packagerating/audit-dependencies@v1
+        with:
+          api-key: ${{ secrets.PACKAGERATING_API_KEY }}
+          fail-on-risk: 90
