@@ -1,6 +1,6 @@
 {
   "name": "audit-dependencies",
-  "version": "1.6.3",
+  "version": "1.6.4",
   "private": true,
   "license": "MIT",
   "description": "Score your npm dependencies with packagerating.com",
