@@ -25,7 +25,15 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add dist/index.js
           git diff --staged --quiet || git commit -m "chore: build dist for ${{ github.ref_name }}"
-          git push origin HEAD:main
+          # Best-effort only: main's branch protection requires the "Score npm dependencies"
+          # check, which only ever runs on pull_request -- a direct push here can never satisfy
+          # it, so this push is expected to fail under normal branch protection and that's fine.
+          # It's not load-bearing: the tag below is created from this same local commit
+          # regardless of whether main accepted the push, and consumers pin the tag
+          # (`uses: packagerating/audit-dependencies@v1`), not main directly. A successful push
+          # here is a nice-to-have (keeps main's checked-in dist/index.js in sync with the last
+          # release) but must never fail the release itself.
+          git push origin HEAD:main || echo "::warning::Could not push the dist rebuild to main (expected under branch protection -- the release tag is unaffected and will still contain the correct build)."
       - name: Move version tag to the dist-build commit
         run: |
           git tag -f "${{ github.ref_name }}"
