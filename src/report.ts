@@ -15,6 +15,7 @@ function scoreCell(value: number | null, threshold: number | null, direction: 'h
 function noteCell(pkg: PackageScore): string {
   if (pkg.status === 'unscored') return 'Crawl timed out'
   if (pkg.status === 'crawl-error') return 'Crawl error'
+  if (pkg.status === 'rate-limited') return 'Rate limited'
   return ''
 }
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { scorePackages } from '../src/score'
+import { scorePackages, MAX_CONCURRENT_REQUESTS } from '../src/score'
 import type { DiscoveredPackage } from '../src/discover'
 
 const mockFetch = vi.fn()
@@ -154,5 +154,34 @@ describe('scorePackages', () => {
     expect(result.find(r => r.name === 'bad-pkg')!.status).toBe('crawl-error')
     expect(result.find(r => r.name === 'good-pkg')!.status).toBe('scored')
     expect(result.find(r => r.name === 'good-pkg')!.generalScore).toBe(75)
+  })
+
+  it('returns rate-limited (not crawl-error) when 429 persists across all retries', async () => {
+    mockFetch.mockResolvedValue({ status: 429, ok: false, json: () => Promise.resolve({}) })
+    const result = await scorePackages([pkg('throttled-pkg')], 'key', 10)
+    expect(result[0]!.status).toBe('rate-limited')
+  })
+
+  it('limits concurrent in-flight requests instead of firing all packages at once', async () => {
+    let inFlight = 0
+    let maxInFlight = 0
+    const packages = Array.from({ length: 12 }, (_, i) => pkg(`pkg-${i}`))
+    mockFetch.mockImplementation(() => {
+      inFlight++
+      maxInFlight = Math.max(maxInFlight, inFlight)
+      return new Promise(resolve => {
+        setTimeout(() => {
+          inFlight--
+          resolve({
+            status: 200,
+            ok: true,
+            json: () => Promise.resolve({ general_score: 50, automation_score: 50, risk_score: 50 }),
+          })
+        }, 10)
+      })
+    })
+    await scorePackages(packages, 'key', 10)
+    expect(maxInFlight).toBeLessThanOrEqual(MAX_CONCURRENT_REQUESTS)
+    expect(maxInFlight).toBeGreaterThan(1)
   })
 })
