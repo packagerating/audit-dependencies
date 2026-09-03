@@ -4,7 +4,7 @@ export interface PackageScore {
   generalScore: number | null
   automationScore: number | null
   riskScore: number | null
-  status: 'scored' | 'unscored' | 'crawl-error'
+  status: 'scored' | 'unscored' | 'crawl-error' | 'rate-limited'
 }
 
 export interface Thresholds {

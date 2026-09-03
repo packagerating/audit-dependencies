@@ -105,6 +105,13 @@ describe('buildMarkdownTable', () => {
     expect(buildMarkdownTable(scores, none)).toContain('Crawl error')
   })
 
+  it('shows "Rate limited" note for rate-limited status', () => {
+    const scores: PackageScore[] = [
+      { name: 'pkg', version: null, generalScore: null, automationScore: null, riskScore: null, status: 'rate-limited' },
+    ]
+    expect(buildMarkdownTable(scores, none)).toContain('Rate limited')
+  })
+
   it('shows the package version in its own column', () => {
     const scores: PackageScore[] = [
       { name: 'pkg', version: '4.17.21', generalScore: 80, automationScore: 80, riskScore: 20, status: 'scored' },
