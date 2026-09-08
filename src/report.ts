@@ -18,7 +18,7 @@ function noteCell(pkg: PackageScore, thresholds: Thresholds): string {
   if (pkg.status === 'crawl-error') return 'Crawl error'
   if (pkg.status === 'rate-limited') return 'Rate limited'
   if (isBelowThreshold(pkg, thresholds)) {
-    return `[Below threshold — see why →](https://packagerating.com/packages/${pkg.name})`
+    return `[Below threshold — see why →](https://packagerating.com/packages/${encodeURIComponent(pkg.name)})`
   }
   return ''
 }

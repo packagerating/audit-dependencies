@@ -105,9 +105,12 @@ Set `audit-subprojects: false` to disable this discovery entirely and only audit
 ## Report table
 
 The job summary and PR comment show one row per package with General, Automation, and Risk
-scores, plus a `Note` column. `Note` is blank for normally-scored packages — it's only populated
-when a score is missing: `Crawl timed out` (the on-demand crawl didn't finish within
-`crawl-timeout`) or `Crawl error` (the crawl failed).
+scores, plus a `Note` column. `Note` is blank when the package scored normally and passes every
+configured `fail-on-*` threshold (or none are configured). Otherwise it shows one of:
+`Crawl timed out` (the on-demand crawl didn't finish within `crawl-timeout`), `Crawl error` (the
+crawl failed), `Rate limited` (the scoring API rate-limited the request), or, when a `fail-on-*`
+threshold is configured and the package fails it, a `Below threshold — see why →` link to that
+package's page on packagerating.com.
 
 ## With gating
 

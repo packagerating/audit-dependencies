@@ -140,6 +140,14 @@ describe('buildMarkdownTable', () => {
     expect(table).toContain('[Below threshold — see why →](https://packagerating.com/packages/risky-pkg)')
   })
 
+  it('URL-encodes a scoped package name in the below-threshold link', () => {
+    const scores: PackageScore[] = [
+      { name: '@scope/pkg', version: '1.0.0', generalScore: 30, automationScore: 80, riskScore: 20, status: 'scored' },
+    ]
+    const table = buildMarkdownTable(scores, { general: 50, automation: null, risk: null })
+    expect(table).toContain('[Below threshold — see why →](https://packagerating.com/packages/%40scope%2Fpkg)')
+  })
+
   it('shows no link for a scored package that passes every configured threshold', () => {
     const scores: PackageScore[] = [
       { name: 'good-pkg', version: '1.0.0', generalScore: 90, automationScore: 90, riskScore: 10, status: 'scored' },
