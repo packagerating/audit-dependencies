@@ -1,6 +1,7 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
 import type { PackageScore, Thresholds } from './types'
+import { isBelowThreshold } from './index'
 
 const COMMENT_MARKER = '<!-- packagerating-audit -->'
 
@@ -12,10 +13,13 @@ function scoreCell(value: number | null, threshold: number | null, direction: 'h
   return passes ? `${rounded} ✅` : `${rounded} ⚠️`
 }
 
-function noteCell(pkg: PackageScore): string {
+function noteCell(pkg: PackageScore, thresholds: Thresholds): string {
   if (pkg.status === 'unscored') return 'Crawl timed out'
   if (pkg.status === 'crawl-error') return 'Crawl error'
   if (pkg.status === 'rate-limited') return 'Rate limited'
+  if (isBelowThreshold(pkg, thresholds)) {
+    return `[Below threshold — see why →](https://packagerating.com/packages/${pkg.name})`
+  }
   return ''
 }
 
@@ -28,7 +32,7 @@ export function buildMarkdownTable(scores: PackageScore[], thresholds: Threshold
   })
 
   const rows = sorted.map(pkg =>
-    `| ${pkg.name} | ${pkg.version ?? '—'} | ${scoreCell(pkg.generalScore, thresholds.general)} | ${scoreCell(pkg.automationScore, thresholds.automation)} | ${scoreCell(pkg.riskScore, thresholds.risk, 'lower-is-better')} | ${noteCell(pkg)} |`,
+    `| ${pkg.name} | ${pkg.version ?? '—'} | ${scoreCell(pkg.generalScore, thresholds.general)} | ${scoreCell(pkg.automationScore, thresholds.automation)} | ${scoreCell(pkg.riskScore, thresholds.risk, 'lower-is-better')} | ${noteCell(pkg, thresholds)} |`,
   )
 
   return [

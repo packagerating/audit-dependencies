@@ -18,6 +18,13 @@ function parseSubprojectMaxDepth(value: string): number {
   return n
 }
 
+export function isBelowThreshold(pkg: PackageScore, thresholds: Thresholds): boolean {
+  if (thresholds.general !== null && pkg.generalScore !== null && pkg.generalScore < thresholds.general) return true
+  if (thresholds.automation !== null && pkg.automationScore !== null && pkg.automationScore < thresholds.automation) return true
+  if (thresholds.risk !== null && pkg.riskScore !== null && pkg.riskScore > thresholds.risk) return true
+  return false
+}
+
 export function checkThresholds(scores: PackageScore[], thresholds: Thresholds): string[] {
   const failures: string[] = []
   for (const pkg of scores.filter(s => s.status === 'scored')) {
